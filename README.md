@@ -78,10 +78,10 @@ License：MIT
 ## 📅 开发记录
 仓库commit保留完整开发记录，Issues记录需求迭代
 开发周期：9月11日 — 9月24日
-仓库地址：https://github.com/xxx/moon-hive
+仓库地址：https://github.com/Duckweed-yhb/moon-hive
 
 ## 👥 团队信息
-团队名称：
+团队名称：Duckweed
 成员：单人参赛
 赛事群：已加入赛事交流群（满足奖金发放条件）
 
