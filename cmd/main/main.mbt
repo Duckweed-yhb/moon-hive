@@ -4,7 +4,12 @@
 /// 用法: moon run cmd/main <plugin> <command> [args...]
 /// 示例: moon run cmd/main base64 encode "hello world"
 fn main {
-  println("MoonHive v0.1.0 by Duckweed - 基于 MoonBit 的插件化 CLI 工具基座")
-  println("用法: moon run cmd/main <plugin> <command> [args...]")
-  println("当前可用插件: (开发中，请期待 Base64 / Hex)")
+  let plugin = @lib.Base64Plugin::{}
+  print_plugin_info(plugin)
+}
+
+/// 打印任意插件的信息（参数是 Plugin 特征对象，任何插件都能传进来）
+fn print_plugin_info(plugin : &@lib.Plugin) -> Unit {
+  println("插件名: " + plugin.name())
+  println("描述: " + plugin.description())
 }

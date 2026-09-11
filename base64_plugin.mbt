@@ -1,9 +1,12 @@
-struct Base64Plugin
+///|
+pub(all) struct Base64Plugin {}
 
-impl Plugin for Base64Plugin with name() {
+///|
+pub impl Plugin for Base64Plugin with name(self) {
   "base64"
 }
 
-impl Plugin for Base64Plugin with description() {
+///|
+pub impl Plugin for Base64Plugin with description(self) {
   "Base64 编码/解码插件：支持字符串与文件的编码/解码"
 }
