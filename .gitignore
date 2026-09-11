@@ -3,3 +3,9 @@
 
 # 申报表单参考截图（本地临时参考，不提交）
 _申报书参考.png
+
+# MoonBit 构建产物与本地缓存
+target/
+_build/
+.mooncakes/
+*.mbti

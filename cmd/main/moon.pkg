@@ -1,0 +1,2 @@
+// 可执行入口包：只负责 CLI 参数解析与任务分发，业务逻辑放在库包中。
+pkgtype(kind: "executable")
