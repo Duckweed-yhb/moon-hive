@@ -8,7 +8,7 @@ fn main {
   if argv.length() <= 1 {
     list_plugins()
   } else {
-    run_plugin(argv[1])
+    run_plugin(argv[1], argv[2:])
   }
 }
 
@@ -20,12 +20,16 @@ fn list_plugins() -> Unit {
   }
 }
 
-/// 根据插件名调用对应插件
-fn run_plugin(name : String) -> Unit {
+/// 根据插件名调用对应插件，并把剩余参数交给插件的 execute 处理
+fn run_plugin(name : String, args : ArrayView[String]) -> Unit {
   match @lib.find_plugin(name) {
     Some(plugin) => {
-      println("插件名: " + plugin.name())
-      println("描述: " + plugin.description())
+      if args.length() > 0 {
+        let command = args[0]
+        println(plugin.execute(command, args[1:]))
+      } else {
+        println("用法: moon run cmd/main <插件名> <命令> [参数...]")
+      }
     }
     None => println("未知插件: " + name)
   }

@@ -1,2 +1,3 @@
-// 根库包：放置插件接口（Plugin Trait）、插件注册表与共享工具函数。
-// 具体插件（base64 / hex）将作为独立子包接入。
+import {
+  "moonbitlang/core/encoding/utf8" @utf8,
+}
