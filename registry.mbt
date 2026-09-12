@@ -1,6 +1,6 @@
 ///| 插件注册表：返回项目所有已注册的插件
 pub fn all_plugins() -> Array[&Plugin] {
-  [Base64Plugin::{}]
+  [Base64Plugin::{}, HexPlugin::{}]
 }
 
 ///| 根据插件名查找插件；找不到返回 None
