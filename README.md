@@ -1,5 +1,7 @@
 # MoonHive
 
+[![CI](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml/badge.svg)](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml)
+
 参赛：MoonBit 2026 九月黑客松
 赛道：应用与内容工具
 
