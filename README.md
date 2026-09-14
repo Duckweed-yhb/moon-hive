@@ -8,7 +8,7 @@
 ## 📖 项目简介
 
 项目名 MoonHive：Moon 代表 MoonBit，Hive（蜂巢）寓意插件如同蜂巢中的独立巢室，可持续扩展。
-一句话描述项目：基于 MoonBit 实现的插件化 CLI 工具基座，采用"万物皆插件"架构，首期实现 Base64、Hex 字符串编解码插件，后续可扩展 Web、电气嵌入式、CTF 类工具插件。
+一句话描述项目：基于 MoonBit 实现的插件化 CLI 工具基座，采用"万物皆插件"架构，已实现 Base64、Hex 字符串编解码插件，以及 **每日 GitHub 项目投喂插件**（digest 推荐引擎 + daily.ps1 数据管道），可持续扩展新插件。
 
 ### 背景与目标
 
@@ -21,7 +21,11 @@
 - [x] 插件基座：插件 Trait 定义、静态插件注册、子命令调度、统一错误处理
 - [x] Base64 插件：字符串编码 / 解码（标准 Base64，支持中文与空串）
 - [x] Hex 插件：字符串编码 / 解码（UTF-8 字节 ↔ 十六进制文本）
-- [x] 单元测试：10 个用例覆盖编码/解码往返、中文、空串与非法输入（`moon test` 全部通过）
+- [x] **Daily 插件（每日 GitHub 项目投喂）**：digest 命令解析 GitHub API 项目 JSON，输出今日推荐卡片（名称 / 星数 / 语言 / 描述 / 链接 / 更新时间）；支持直接 JSON 或 Base64 编码输入，规避命令行引号问题
+- [x] **keep 收藏管理**：按编号从推荐中选取项目，与旧收藏按 url 合并去重，输出最新收藏 JSON
+- [x] **export 导出**：收藏清单 → Markdown（按星数降序），可直接贴进 README / 备忘录
+- [x] 配套数据管道 `daily.ps1`：拉取 GitHub Search API → 精简字段 → Base64 编码 → digest 展示 → 输入编号收藏 → 保存 favorites.json → 可选导出 Markdown（完整闭环）
+- [x] 单元测试：26 个用例覆盖编码/解码往返、中文、空串、非法输入、JSON 解析、收藏去重与导出格式（`moon test` 全部通过）
 - [ ] 可选扩展（本次不做，后续迭代）
   - Web 工具插件：HTTP 请求、JSON 格式化、URL 编解码
   - 电气嵌入式插件：电路计算器、仿真日志解析
@@ -50,6 +54,18 @@ moon run cmd/main base64 decode "aGVsbG8gd29ybGQ="
 # Hex 编码 / 解码
 moon run cmd/main hex encode "hello"
 moon run cmd/main hex decode "68656c6c6f"
+
+# 每日 GitHub 项目投喂（推荐用法：运行配套脚本 daily.ps1）
+powershell -ExecutionPolicy Bypass -File daily.ps1
+
+# 也可以直接调用 digest（参数为 JSON 文本或 Base64 编码的 JSON）
+moon run cmd/main daily digest '[{"name":"demo","stargazers_count":42,"language":"MoonBit"}]'
+
+# 收藏：从推荐中保留编号 1、3（可追加旧收藏 JSON 实现增量合并）
+moon run cmd/main daily keep '<项目JSON>' '1,3' '[旧收藏JSON]'
+
+# 导出收藏为 Markdown
+moon run cmd/main daily export '<收藏JSON>'
 ```
 
 ### 运行示例
@@ -71,6 +87,24 @@ e4bda0e5a5bd
 
 $ moon run cmd/main hex decode "e4bda0e5a5bd"
 你好
+
+$ powershell -ExecutionPolicy Bypass -File daily.ps1
+================ MoonHive 每日项目投喂 ================
+搜索条件: language:moonbit | 数量: 5 | 排序: updated
+正在从 GitHub 拉取项目...
+
+今日推荐（5 个项目）
+──────────────────────────────────────────────
+[1] stb-image  ⭐1  [MoonBit]
+    STB‑Image FFI binding for MoonBit(native‑only). Decode PNG/JPEG/BMP/GIF/WebP/HDR/PSD/PIC.
+    https://github.com/toadium/stb-image
+    更新: 2026-09-14T07:20:03Z
+...
+
+要保留哪些项目？(输入编号如 1,3，回车跳过) 1,3
+已保存收藏：2 个项目 → E:\...\moon-hive\favorites.json
+导出 Markdown 清单？(y/n，默认 n) y
+已导出 → E:\...\moon-hive\favorites.md
 ```
 
 ## 🏗️ 架构说明
@@ -90,11 +124,11 @@ $ moon run cmd/main hex decode "e4bda0e5a5bd"
 └─────────────────────────────────────────────┘
                     │ 实现同一个 Plugin Trait
                     ▼
-┌──────────────────┬──────────────────────────┐
-│ base64_plugin.mbt │ hex_plugin.mbt           │
-│ name/description/ │ name/description/        │
-│ execute           │ execute                  │
-└──────────────────┴──────────────────────────┘
+┌──────────────────┬──────────────────────────┬─────────────────────┐
+│ base64_plugin.mbt │ hex_plugin.mbt           │ daily_plugin.mbt    │
+│ name/description/ │ name/description/        │ digest 推荐引擎      │
+│ execute           │ execute                  │ JSON 解析 + Base64   │
+└──────────────────┴──────────────────────────┴─────────────────────┘
 ```
 
 - **Plugin Trait**（插件合同）：`name`、`description`、`execute(Self, command, args)` 三个方法
@@ -133,7 +167,10 @@ moon-hive/
 ├── plugin.mbt             # Plugin Trait 定义
 ├── base64_plugin.mbt      # Base64 插件
 ├── hex_plugin.mbt         # Hex 插件
+├── daily_plugin.mbt       # Daily 插件（每日 GitHub 项目投喂）
+├── daily_plugin_test.mbt  # Daily 插件单元测试
 ├── registry.mbt           # 插件注册表与查找
+├── daily.ps1              # 数据管道脚本（GitHub API → Base64 → digest）
 ├── cmd/
 │   └── main/
 │       ├── moon.pkg       # 可执行包配置
@@ -144,12 +181,13 @@ moon-hive/
 
 ## 💻 技术实现与 MoonBit 使用亮点
 
-- MoonBit 特性：Trait 定义插件统一接口、强类型系统保障接口约束、core 标准库（UTF-8 编解码）、静态注册表。
+- MoonBit 特性：Trait 定义插件统一接口、强类型系统保障接口约束、core 标准库（UTF-8 编解码 / JSON 解析）、静态注册表。
 - 核心模块设计：
   1. 插件基座：定义统一 Plugin Trait，维护插件注册表，解析 CLI 参数并分发至对应插件。
   2. Base64 插件：独立模块，实现标准 Base64 编码 / 解码（3 字节 → 4 字符，位运算分组）。
   3. Hex 插件：独立模块，实现 UTF-8 字节与十六进制文本互转。
-- 难点与解决方案：采用**静态编译期注册插件**，避开 MoonBit 暂不支持运行时动态加载的限制，在保持插件化架构思想的前提下降低工程难度。
+  4. Daily 插件：解析 GitHub API 项目 JSON（core `@json` 模式匹配安全取值），输出结构化推荐卡片；支持 Base64 编码输入，规避命令行引号/空格问题。
+- 难点与解决方案：采用**静态编译期注册插件**，避开 MoonBit 暂不支持运行时动态加载的限制；**数据管道与算法引擎分工**——GitHub API 拉取与字段精简由 `daily.ps1`（系统脚本）负责，推荐解析与展示由 MoonBit 纯 core 实现（零第三方依赖）。
 
 ## 🤖 AI 参与说明（赛事必填）
 

@@ -9,3 +9,7 @@ target/
 _build/
 .mooncakes/
 *.mbti
+
+# 每日投喂运行时数据（个人收藏，不纳入公开仓库）
+favorites.json
+favorites.md
