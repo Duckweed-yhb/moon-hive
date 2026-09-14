@@ -100,6 +100,46 @@ fn count_occurrences(s : String, sub : String) -> Int {
 }
 
 test {
+  // filter：按语言筛选（大小写不敏感）
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":5,\"language\":\"MoonBit\",\"updated_at\":\"\"},{\"name\":\"b\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":8,\"language\":\"Python\",\"updated_at\":\"\"}]"
+  let out = filter(repos, "moonbit", 0, 0, "")
+  assert_true(out.contains("[1] a"))
+  assert_true(!out.contains("[1] b"))
+}
+
+test {
+  // filter：按星数区间筛选
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":5,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"b\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":42,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"c\",\"description\":\"\",\"html_url\":\"https://x/c\",\"stargazers_count\":100,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = filter(repos, "", 10, 50, "")
+  assert_true(!out.contains("a"))
+  assert_true(out.contains("b"))
+  assert_true(!out.contains("c"))
+}
+
+test {
+  // filter：按关键词筛选（名称或描述，大小写不敏感）
+  let repos = "[{\"name\":\"async-lib\",\"description\":\"async programming\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"web-ui\",\"description\":\"UI framework\",\"html_url\":\"https://x/w\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = filter(repos, "", 0, 0, "ASYNC")
+  assert_true(out.contains("async-lib"))
+  assert_true(!out.contains("web-ui"))
+}
+
+test {
+  // filter：组合条件（语言 + 星数 + 关键词）
+  let repos = "[{\"name\":\"m1\",\"description\":\"http server\",\"html_url\":\"https://x/m1\",\"stargazers_count\":50,\"language\":\"MoonBit\",\"updated_at\":\"\"},{\"name\":\"m2\",\"description\":\"http client\",\"html_url\":\"https://x/m2\",\"stargazers_count\":3,\"language\":\"MoonBit\",\"updated_at\":\"\"},{\"name\":\"p1\",\"description\":\"http server\",\"html_url\":\"https://x/p1\",\"stargazers_count\":50,\"language\":\"Python\",\"updated_at\":\"\"}]"
+  let out = filter(repos, "moonbit", 10, 0, "http")
+  assert_true(out.contains("m1"))
+  assert_true(!out.contains("m2"))
+  assert_true(!out.contains("p1"))
+}
+
+test {
+  // filter：无匹配返回提示
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"}]"
+  assert_true(filter(repos, "", 100, 0, "").contains("没有符合筛选条件"))
+}
+
+test {
   // digest：空数组返回提示
   inspect(digest("[]"), content="（没有可推荐的项目）")
 }

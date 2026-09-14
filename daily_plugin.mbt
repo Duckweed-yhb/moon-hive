@@ -43,7 +43,57 @@ pub impl Plugin for DailyPlugin with execute(_self, command, args) {
         export_md(args[0])
       }
     }
-    _ => "未知命令: \{command}（支持: digest / keep / export）"
+    "filter" => {
+      if args.length() < 1 {
+        "用法: moon run cmd/main daily filter <项目JSON> [--lang 语言] [--min 星数] [--max 星数] [--kw 关键词]\n示例: daily filter '<json>' --lang MoonBit --min 10 --kw async"
+      } else {
+        let mut lang = ""
+        let mut min = 0
+        let mut max = 0
+        let mut kw = ""
+        let mut i = 1
+        while i < args.length() {
+          match args[i] {
+            "--lang" => {
+              if i + 1 < args.length() {
+                lang = args[i + 1]
+                i = i + 1
+              }
+            }
+            "--min" => {
+              if i + 1 < args.length() {
+                min = try {
+                  @string.parse_int(args[i + 1])
+                } catch {
+                  _ => 0
+                }
+                i = i + 1
+              }
+            }
+            "--max" => {
+              if i + 1 < args.length() {
+                max = try {
+                  @string.parse_int(args[i + 1])
+                } catch {
+                  _ => 0
+                }
+                i = i + 1
+              }
+            }
+            "--kw" => {
+              if i + 1 < args.length() {
+                kw = args[i + 1]
+                i = i + 1
+              }
+            }
+            _ => ()
+          }
+          i = i + 1
+        }
+        filter(args[0], lang, min, max, kw)
+      }
+    }
+    _ => "未知命令: \{command}（支持: digest / filter / keep / export）"
   }
 }
 
@@ -142,8 +192,69 @@ pub fn parse_fav_list(json_str : String) -> Result[Array[Faved], String] {
 ///| 解析并输出今日推荐卡片（输入支持直接 JSON 或 Base64 编码 JSON）
 pub fn digest(json_str : String) -> String {
   match parse_repo_list(json_str) {
-    Ok(repos) => render_cards(repos)
+    Ok(repos) => render_cards(repos, "今日推荐")
     Err(msg) => msg
+  }
+}
+
+///| 按条件筛选项目：语言（大小写不敏感）/ 最低星数 / 最高星数 / 关键词（名称或描述，大小写不敏感）
+pub fn filter(
+  repos_str : String,
+  lang : String,
+  min_stars : Int,
+  max_stars : Int,
+  keyword : String,
+) -> String {
+  let repos = match parse_repo_list(repos_str) {
+    Ok(r) => r
+    Err(msg) => return msg
+  }
+  let l = lang.to_lower()
+  let k = keyword.to_lower()
+  let filtered = []
+  for r in repos {
+    let mut ok = true
+    if l != "" && r.lang.to_lower() != l {
+      ok = false
+    }
+    if ok && min_stars > 0 && r.stars < min_stars {
+      ok = false
+    }
+    if ok && max_stars > 0 && r.stars > max_stars {
+      ok = false
+    }
+    if ok && k != "" && !r.name.to_lower().contains(k) && !r.desc.to_lower().contains(k) {
+      ok = false
+    }
+    if ok {
+      filtered.push(r)
+    }
+  }
+  if filtered.length() == 0 {
+    return "（没有符合筛选条件的项目）"
+  }
+  render_cards(filtered, "筛选结果（条件: \{describe_cond(lang, min_stars, max_stars, keyword)}）")
+}
+
+///| 描述筛选条件（用于结果标题）
+fn describe_cond(lang : String, min_stars : Int, max_stars : Int, keyword : String) -> String {
+  let parts = []
+  if lang != "" {
+    parts.push("语言=" + lang)
+  }
+  if min_stars > 0 {
+    parts.push("星数>=" + min_stars.to_string())
+  }
+  if max_stars > 0 {
+    parts.push("星数<=" + max_stars.to_string())
+  }
+  if keyword != "" {
+    parts.push("关键词=" + keyword)
+  }
+  if parts.length() == 0 {
+    "无"
+  } else {
+    parts.join(",")
   }
 }
 
@@ -269,12 +380,12 @@ fn favs_to_json(favs : Array[Faved]) -> String {
 }
 
 ///| 把项目列表渲染成终端推荐卡片
-fn render_cards(repos : Array[Repo]) -> String {
+fn render_cards(repos : Array[Repo], title : String) -> String {
   if repos.length() == 0 {
     return "（没有可推荐的项目）"
   }
   let buf = StringBuilder()
-  buf.write_string("今日推荐（\{repos.length()} 个项目）\n")
+  buf.write_string(title + "（\{repos.length()} 个项目）\n")
   buf.write_string(dash_line(46) + "\n")
   let mut i = 0
   while i < repos.length() {
