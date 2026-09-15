@@ -1,6 +1,7 @@
 # MoonHive
 
 [![CI](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml/badge.svg)](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 参赛：MoonBit 2026 九月黑客松
 赛道：应用与内容工具
@@ -13,7 +14,7 @@
 ### 背景与目标
 
 - 解决的真实问题：零散命令行工具相互独立，难以统一管理；本项目提供统一 CLI 基座，新增功能只需开发独立插件并注册，无需改动基座核心代码。
-- 项目边界（本次开发范围）：实现插件基座 + Base64 / Hex 字符串编解码插件，配套单元测试与可运行 Demo。
+- 项目边界（本次开发范围）：插件基座 + Base64 / Hex 字符串编解码插件 + **Daily 每日 GitHub 项目投喂插件**（digest 推荐 / summary 摘要 / filter 筛选 / keep 收藏 / export 导出 + daily.ps1 数据管道），配套 39 个单元测试与可运行 Demo。
 - 不做什么：不实现运行时动态加载插件；文件编解码、Web、嵌入式、CTF 其余工具仅作为后续规划，本次不编码；不实现 TUI、配置文件、命令补全。
 
 ## ✨ 核心功能
@@ -22,12 +23,13 @@
 - [x] Base64 插件：字符串编码 / 解码（标准 Base64，支持中文与空串）
 - [x] Hex 插件：字符串编码 / 解码（UTF-8 字节 ↔ 十六进制文本）
 - [x] **Daily 插件（每日 GitHub 项目投喂）**：digest 命令解析 GitHub API 项目 JSON，输出今日推荐卡片（名称 / 星数 / 语言 / 描述 / 链接 / 更新时间）；支持直接 JSON 或 Base64 编码输入，规避命令行引号问题
+- [x] **summary 项目摘要**："这个项目在讲什么" —— 一句话摘要 + 话题标签（自研关键词提取，过滤停用词）+ 项目类型判断（框架/绑定/CLI/库…）+ 相对更新时间（今天/昨天/N 天前）
 - [x] **多因子推荐排序**：digest 默认按 score 打分排序（60% 星数 log 归一化 + 40% 新鲜度衰减），支持 `--sort stars` / `--sort updated` / `--sort none`
 - [x] **keep 收藏管理**：按编号从推荐中选取项目，与旧收藏按 url 合并去重，输出最新收藏 JSON
 - [x] **filter 多维筛选**：按语言（大小写不敏感）/ 最低星数 / 最高星数 / 关键词（名称或描述）组合过滤
 - [x] **export 导出**：收藏清单 → Markdown（按星数降序），可直接贴进 README / 备忘录
 - [x] 配套数据管道 `daily.ps1`：拉取 GitHub Search API → 精简字段 → Base64 编码 → digest 展示 → 输入编号收藏 → 保存 favorites.json → 可选导出 Markdown（完整闭环）
-- [x] 单元测试：35 个用例覆盖编码/解码往返、中文、空串、非法输入、JSON 解析、收藏去重、导出格式、多维筛选与推荐排序（`moon test` 全部通过）
+- [x] 单元测试：39 个用例覆盖编码/解码往返、中文、空串、非法输入、JSON 解析、收藏去重、导出格式、多维筛选、推荐排序与项目摘要（`moon test` 全部通过）
 - [ ] 可选扩展（本次不做，后续迭代）
   - Web 工具插件：HTTP 请求、JSON 格式化、URL 编解码
   - 电气嵌入式插件：电路计算器、仿真日志解析
@@ -66,6 +68,9 @@ moon run cmd/main daily digest '<项目JSON>' --sort stars
 
 # 收藏：从推荐中保留编号 1、3（可追加旧收藏 JSON 实现增量合并）
 moon run cmd/main daily keep '<项目JSON>' '1,3' '[旧收藏JSON]'
+
+# 项目摘要：这个项目在讲什么（一句话 + 话题 + 类型 + 更新时间）
+moon run cmd/main daily summary '<项目JSON>'
 
 # 筛选：按语言/星数/关键词组合过滤（支持大小写不敏感）
 moon run cmd/main daily filter '<项目JSON>' --lang MoonBit --min 10 --max 100 --kw async
@@ -169,18 +174,21 @@ pub fn all_plugins() -> Array[&Plugin] {
 ```
 moon-hive/
 ├── moon.mod               # 模块定义（Duckweed/moon-hive）
-├── moon.pkg               # 根包配置（导入 core UTF-8 库）
+├── moon.pkg               # 根包配置（导入 core：utf8 / env / json / math / string）
 ├── plugin.mbt             # Plugin Trait 定义
 ├── base64_plugin.mbt      # Base64 插件
+├── base64_test.mbt        # Base64 单元测试
 ├── hex_plugin.mbt         # Hex 插件
-├── daily_plugin.mbt       # Daily 插件（每日 GitHub 项目投喂）
+├── hex_test.mbt           # Hex 单元测试
+├── daily_plugin.mbt       # Daily 插件（推荐/摘要/筛选/收藏/导出 + 排序引擎）
 ├── daily_plugin_test.mbt  # Daily 插件单元测试
 ├── registry.mbt           # 插件注册表与查找
-├── daily.ps1              # 数据管道脚本（GitHub API → Base64 → digest）
+├── daily.ps1              # 数据管道脚本（GitHub API → Base64 → digest → 收藏）
 ├── cmd/
 │   └── main/
 │       ├── moon.pkg       # 可执行包配置
 │       └── main.mbt       # CLI 入口（调度外壳）
+├── .github/workflows/ci.yml  # GitHub Actions：build + test
 ├── README.md
 └── LICENSE                # MIT
 ```
@@ -194,6 +202,15 @@ moon-hive/
   3. Hex 插件：独立模块，实现 UTF-8 字节与十六进制文本互转。
   4. Daily 插件：解析 GitHub API 项目 JSON（core `@json` 模式匹配安全取值），输出结构化推荐卡片；支持 Base64 编码输入，规避命令行引号/空格问题。
 - 难点与解决方案：采用**静态编译期注册插件**，避开 MoonBit 暂不支持运行时动态加载的限制；**数据管道与算法引擎分工**——GitHub API 拉取与字段精简由 `daily.ps1`（系统脚本）负责，推荐解析与展示由 MoonBit 纯 core 实现（零第三方依赖）。
+
+## 🗺️ Roadmap
+
+- [x] 插件基座 + Base64 / Hex 插件（首个闭环）
+- [x] Daily 每日 GitHub 项目投喂：digest / keep / export（数据管道闭环）
+- [x] filter 多维筛选 + summary 项目摘要 + 多因子推荐排序
+- [ ] stats 生态统计（语言分布 / 星数分档 / 更新活跃度）
+- [ ] random 随机推荐 + compare 项目对比
+- [ ] daily.ps1 参数化（--sort / --filter 透传）与一键导出
 
 ## 🤖 AI 参与说明（赛事必填）
 

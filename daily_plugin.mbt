@@ -52,6 +52,13 @@ pub impl Plugin for DailyPlugin with execute(_self, command, args) {
         export_md(args[0])
       }
     }
+    "summary" => {
+      if args.length() < 1 {
+        "用法: moon run cmd/main daily summary '<项目JSON>'\n支持直接 JSON 或 Base64 编码的 JSON"
+      } else {
+        summary(args[0])
+      }
+    }
     "filter" => {
       if args.length() < 1 {
         "用法: moon run cmd/main daily filter <项目JSON> [--lang 语言] [--min 星数] [--max 星数] [--kw 关键词]\n示例: daily filter '<json>' --lang MoonBit --min 10 --kw async"
@@ -626,5 +633,174 @@ fn get_int(j : Json, key : String) -> Int {
     }
   } else {
     0
+  }
+}
+
+///| 项目摘要："在讲什么" —— 一句话 + 话题标签 + 类型判断 + 相对更新时间
+pub fn summary(json_str : String) -> String {
+  match parse_repo_list(json_str) {
+    Ok(repos) => {
+      let today = (@env.now() / 86400000UL).to_int()
+      let buf = StringBuilder()
+      buf.write_string("项目摘要（\{repos.length()} 个）\n")
+      buf.write_string(dash_line(46) + "\n")
+      let mut i = 0
+      while i < repos.length() {
+        let r = repos[i]
+        let tags = top_topics(r).join(" · ")
+        let days = today - parse_iso_date(r.updated)
+        let when = if days <= 0 {
+          "今天"
+        } else if days == 1 {
+          "昨天"
+        } else {
+          "\{days} 天前"
+        }
+        buf.write_string("[\{i + 1}] \{r.name}  ⭐\{r.stars}  [\{r.lang}]\n")
+        buf.write_string("    在讲什么：\{one_liner(r)}\n")
+        buf.write_string("    话题：\{tags}\n")
+        buf.write_string("    类型：\{type_of(r)}\n")
+        buf.write_string("    更新：\{when}\n")
+        if i + 1 < repos.length() {
+          buf.write_string("\n")
+        }
+        i = i + 1
+      }
+      buf.to_string()
+    }
+    Err(msg) => msg
+  }
+}
+
+///| 一句话摘要：描述截断到 80 字符；无描述时给出提示
+fn one_liner(r : Repo) -> String {
+  if r.desc.length() > 0 {
+    if r.desc.length() > 80 {
+      r.desc[:80].to_owned() + "…"
+    } else {
+      r.desc
+    }
+  } else {
+    "暂无描述（凭名称与星数判断是否值得点开）"
+  }
+}
+
+///| 话题标签：名称+描述分词 → 过滤停用词 → 按词频取 Top 4
+fn top_topics(r : Repo) -> Array[String] {
+  let words : Array[String] = []
+  let counts : Array[Int] = []
+  for w in split_words(r.name + " " + r.desc) {
+    if w.length() > 1 && !is_stopword(w) {
+      let mut found = false
+      let mut k = 0
+      while k < words.length() {
+        if words[k] == w {
+          counts[k] = counts[k] + 1
+          found = true
+        }
+        k = k + 1
+      }
+      if !found {
+        words.push(w)
+        counts.push(1)
+      }
+    }
+  }
+  // 按词频降序选择排序，取前 4
+  let n = words.length()
+  let mut i = 0
+  while i < n {
+    let mut best = i
+    let mut j = i + 1
+    while j < n {
+      if counts[j] > counts[best] {
+        best = j
+      }
+      j = j + 1
+    }
+    if best != i {
+      let tw = words[i]
+      words[i] = words[best]
+      words[best] = tw
+      let tc = counts[i]
+      counts[i] = counts[best]
+      counts[best] = tc
+    }
+    i = i + 1
+  }
+  let limit = if n < 4 { n } else { 4 }
+  let top = []
+  let mut t = 0
+  while t < limit {
+    top.push(words[t])
+    t = t + 1
+  }
+  top
+}
+
+///| 简单分词：按空白与常见标点切分，统一转小写
+fn split_words(s : String) -> Array[String] {
+  let cleaned = StringBuilder()
+  for c in s {
+    if c == ' ' || c == ',' || c == '.' || c == ';' || c == ':' || c == '(' ||
+      c == ')' || c == '/' || c == '|' || c == '&' || c == '+' || c == '\'' ||
+      c == '"' || c == '!' || c == '?' || c == '-' || c == '_' || c == '[' ||
+      c == ']' || c == '{' || c == '}' || c == '#' || c == '@' {
+      cleaned.write_char(' ')
+    } else {
+      cleaned.write_char(c)
+    }
+  }
+  let result = []
+  for w in cleaned.to_string().split(" ") {
+    if w.length() > 0 {
+      result.push(w.to_owned().to_lower())
+    }
+  }
+  result
+}
+
+///| 英文停用词表（高频无信息量词）
+fn is_stopword(w : String) -> Bool {
+  let stops = [
+    "a", "an", "the", "and", "or", "for", "of", "with", "without", "to", "in",
+    "on", "at", "by", "from", "into", "onto", "is", "are", "was", "were", "be",
+    "been", "being", "has", "have", "had", "do", "does", "did", "will", "would",
+    "can", "could", "should", "may", "might", "must", "shall", "this", "that",
+    "these", "those", "it", "its", "as", "not", "no", "so", "but", "if", "then",
+    "than", "too", "very", "just", "also", "etc", "using", "use", "used", "based",
+  ]
+  let mut i = 0
+  while i < stops.length() {
+    if stops[i] == w {
+      return true
+    }
+    i = i + 1
+  }
+  false
+}
+
+///| 项目类型判断：基于名称+描述的关键词匹配
+fn type_of(r : Repo) -> String {
+  let d = (r.name + " " + r.desc).to_lower()
+  if d.contains("framework") {
+    "框架"
+  } else if d.contains("binding") || d.contains("ffi") {
+    "语言绑定"
+  } else if d.contains("compiler") || d.contains("interpreter") || d.contains("language") {
+    "语言/编译器"
+  } else if d.contains("cli") || d.contains("command") || d.contains("terminal") ||
+    d.contains("tool") {
+    "命令行工具"
+  } else if d.contains("library") || d.contains(" lib") {
+    "库"
+  } else if d.contains("demo") || d.contains("example") || d.contains("sample") {
+    "示例"
+  } else if d.contains("web") || d.contains("http") || d.contains("server") {
+    "Web"
+  } else if d.contains("game") {
+    "游戏"
+  } else {
+    "项目"
   }
 }

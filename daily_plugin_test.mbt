@@ -170,6 +170,40 @@ test {
 }
 
 test {
+  // summary：基本结构完整
+  let repos = "[{\"name\":\"async-lib\",\"description\":\"async programming library for MoonBit\",\"html_url\":\"https://x/a\",\"stargazers_count\":68,\"language\":\"MoonBit\",\"updated_at\":\"2026-09-14T00:00:00Z\"}]"
+  let out = summary(repos)
+  assert_true(out.contains("在讲什么"))
+  assert_true(out.contains("话题"))
+  assert_true(out.contains("类型"))
+  assert_true(out.contains("更新"))
+}
+
+test {
+  // summary：话题提取过滤停用词（a/for 不出现，library/web 出现）
+  let repos = "[{\"name\":\"web\",\"description\":\"a library for the web\",\"html_url\":\"https://x/w\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = summary(repos)
+  assert_true(out.contains("library"))
+  assert_true(out.contains("web"))
+  assert_true(!out.contains(" 话题：a "))
+}
+
+test {
+  // summary：类型判断（framework → 框架 / binding → 语言绑定 / 无描述 → 暂无描述）
+  let repos = "[{\"name\":\"ui\",\"description\":\"web UI framework\",\"html_url\":\"https://x/ui\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"img\",\"description\":\"ffi binding\",\"html_url\":\"https://x/img\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"no-desc\",\"description\":\"\",\"html_url\":\"https://x/n\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = summary(repos)
+  assert_true(out.contains("类型：框架"))
+  assert_true(out.contains("类型：语言绑定"))
+  assert_true(out.contains("暂无描述"))
+}
+
+test {
+  // summary：相对更新时间（昨天 → 昨天）
+  let repos = "[{\"name\":\"a\",\"description\":\"demo\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"2026-09-14T00:00:00Z\"}]"
+  assert_true(summary(repos).contains("更新：昨天"))
+}
+
+test {
   // digest：空数组返回提示
   inspect(digest("[]"), content="（没有可推荐的项目）")
 }

@@ -1,15 +1,23 @@
-# 项目申报书（含个人信息，不纳入公开仓库）
-申报书.md
-
-# 申报表单参考截图（本地临时参考，不提交）
-_申报书参考.png
-
-# MoonBit 构建产物与本地缓存
+# MoonBit build artifacts & local cache
 target/
 _build/
 .mooncakes/
 *.mbti
 
-# 每日投喂运行时数据（个人收藏，不纳入公开仓库）
+# Runtime data (personal favorites, not for public repo)
 favorites.json
 favorites.md
+
+# Personal application materials (contains private info)
+申报书.md
+_申报书参考.png
+
+# OS / editor / temp files
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.log
+*.tmp
+*.swp
+.vscode/
+.idea/
