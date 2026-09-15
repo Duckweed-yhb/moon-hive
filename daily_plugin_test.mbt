@@ -7,11 +7,11 @@ test {
 }
 
 test {
-  // digest：多项目按顺序输出并空行分隔
+  // digest：多项目默认按 score 排序（星数高的在前）
   let out = digest(
     "[{\"name\":\"a\",\"stargazers_count\":1},{\"name\":\"b\",\"stargazers_count\":2}]",
   )
-  inspect(out, content="今日推荐（2 个项目）\n" + dash_line(46) + "\n[1] a  ⭐1\n\n[2] b  ⭐2\n")
+  inspect(out, content="今日推荐（2 个项目）\n" + dash_line(46) + "\n[1] b  ⭐2\n\n[2] a  ⭐1\n")
 }
 
 test {
@@ -137,6 +137,36 @@ test {
   // filter：无匹配返回提示
   let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"}]"
   assert_true(filter(repos, "", 100, 0, "").contains("没有符合筛选条件"))
+}
+
+test {
+  // digest：--sort none 保持传入顺序；--sort stars 按星数降序
+  let repos = "[{\"name\":\"a\",\"stargazers_count\":1},{\"name\":\"b\",\"stargazers_count\":2}]"
+  assert_true(digest(repos, sort_by="none").contains("[1] a"))
+  assert_true(digest(repos, sort_by="stars").contains("[1] b"))
+}
+
+test {
+  // digest：--sort updated 按更新时间降序（新的在前）
+  let repos = "[{\"name\":\"old\",\"updated_at\":\"2020-01-01T00:00:00Z\"},{\"name\":\"new\",\"updated_at\":\"2026-09-01T00:00:00Z\"}]"
+  assert_true(digest(repos, sort_by="updated").contains("[1] new"))
+}
+
+test {
+  // days_from_civil：epoch 起点与 2000-01-01（公认值）
+  inspect(days_from_civil(1970, 1, 1).to_string(), content="0")
+  inspect(days_from_civil(2000, 1, 1).to_string(), content="10957")
+}
+
+test {
+  // parse_iso_date：标准 ISO 字符串与非法输入
+  inspect(parse_iso_date("1970-01-01T00:00:00Z").to_string(), content="0")
+  inspect(
+    parse_iso_date("2026-09-14T07:00:00Z").to_string(),
+    content=days_from_civil(2026, 9, 14).to_string(),
+  )
+  inspect(parse_iso_date("").to_string(), content="-1")
+  inspect(parse_iso_date("not-a-date").to_string(), content="-1")
 }
 
 test {

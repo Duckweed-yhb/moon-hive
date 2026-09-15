@@ -22,11 +22,12 @@
 - [x] Base64 插件：字符串编码 / 解码（标准 Base64，支持中文与空串）
 - [x] Hex 插件：字符串编码 / 解码（UTF-8 字节 ↔ 十六进制文本）
 - [x] **Daily 插件（每日 GitHub 项目投喂）**：digest 命令解析 GitHub API 项目 JSON，输出今日推荐卡片（名称 / 星数 / 语言 / 描述 / 链接 / 更新时间）；支持直接 JSON 或 Base64 编码输入，规避命令行引号问题
+- [x] **多因子推荐排序**：digest 默认按 score 打分排序（60% 星数 log 归一化 + 40% 新鲜度衰减），支持 `--sort stars` / `--sort updated` / `--sort none`
 - [x] **keep 收藏管理**：按编号从推荐中选取项目，与旧收藏按 url 合并去重，输出最新收藏 JSON
 - [x] **filter 多维筛选**：按语言（大小写不敏感）/ 最低星数 / 最高星数 / 关键词（名称或描述）组合过滤
 - [x] **export 导出**：收藏清单 → Markdown（按星数降序），可直接贴进 README / 备忘录
 - [x] 配套数据管道 `daily.ps1`：拉取 GitHub Search API → 精简字段 → Base64 编码 → digest 展示 → 输入编号收藏 → 保存 favorites.json → 可选导出 Markdown（完整闭环）
-- [x] 单元测试：31 个用例覆盖编码/解码往返、中文、空串、非法输入、JSON 解析、收藏去重、导出格式与多维筛选（`moon test` 全部通过）
+- [x] 单元测试：35 个用例覆盖编码/解码往返、中文、空串、非法输入、JSON 解析、收藏去重、导出格式、多维筛选与推荐排序（`moon test` 全部通过）
 - [ ] 可选扩展（本次不做，后续迭代）
   - Web 工具插件：HTTP 请求、JSON 格式化、URL 编解码
   - 电气嵌入式插件：电路计算器、仿真日志解析
@@ -59,8 +60,9 @@ moon run cmd/main hex decode "68656c6c6f"
 # 每日 GitHub 项目投喂（推荐用法：运行配套脚本 daily.ps1）
 powershell -ExecutionPolicy Bypass -File daily.ps1
 
-# 也可以直接调用 digest（参数为 JSON 文本或 Base64 编码的 JSON）
+# 也可以直接调用 digest（参数为 JSON 文本或 Base64 编码的 JSON，--sort 可选）
 moon run cmd/main daily digest '[{"name":"demo","stargazers_count":42,"language":"MoonBit"}]'
+moon run cmd/main daily digest '<项目JSON>' --sort stars
 
 # 收藏：从推荐中保留编号 1、3（可追加旧收藏 JSON 实现增量合并）
 moon run cmd/main daily keep '<项目JSON>' '1,3' '[旧收藏JSON]'

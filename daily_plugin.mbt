@@ -23,9 +23,18 @@ pub impl Plugin for DailyPlugin with execute(_self, command, args) {
   match command {
     "digest" => {
       if args.length() < 1 {
-        "用法: moon run cmd/main daily digest '<项目JSON>'\n支持直接 JSON 或 Base64 编码的 JSON"
+        "用法: moon run cmd/main daily digest '<项目JSON>' [--sort score|stars|updated|none]\n支持直接 JSON 或 Base64 编码的 JSON"
       } else {
-        digest(args[0])
+        let mut sort_by = "score"
+        let mut i = 1
+        while i < args.length() {
+          if args[i] == "--sort" && i + 1 < args.length() {
+            sort_by = args[i + 1]
+            i = i + 1
+          }
+          i = i + 1
+        }
+        digest(args[0], sort_by=sort_by)
       }
     }
     "keep" => {
@@ -190,11 +199,119 @@ pub fn parse_fav_list(json_str : String) -> Result[Array[Faved], String] {
 }
 
 ///| 解析并输出今日推荐卡片（输入支持直接 JSON 或 Base64 编码 JSON）
-pub fn digest(json_str : String) -> String {
+///| sort_by: score（星数+新鲜度加权打分，默认）/ stars / updated / none（保持传入顺序）
+pub fn digest(json_str : String, sort_by? : String = "score") -> String {
   match parse_repo_list(json_str) {
-    Ok(repos) => render_cards(repos, "今日推荐")
+    Ok(repos) => {
+      let today = (@env.now() / 86400000UL).to_int()
+      let sorted = sort_repos(repos, sort_by, today)
+      render_cards(sorted, "今日推荐")
+    }
     Err(msg) => msg
   }
+}
+
+///| 按指定策略对项目排序（选择排序，原地交换）
+fn sort_repos(repos : Array[Repo], sort_by : String, today : Int) -> Array[Repo] {
+  if sort_by == "none" {
+    return repos
+  }
+  let scores = if sort_by == "score" { compute_scores(repos, today) } else { [] }
+  let mut i = 0
+  while i < repos.length() {
+    let mut best = i
+    let mut j = i + 1
+    while j < repos.length() {
+      let better = match sort_by {
+        "stars" => repos[j].stars > repos[best].stars
+        "updated" => parse_iso_date(repos[j].updated) > parse_iso_date(repos[best].updated)
+        "score" => scores[j] > scores[best]
+        _ => false
+      }
+      if better {
+        best = j
+      }
+      j = j + 1
+    }
+    if best != i {
+      let tmp = repos[i]
+      repos[i] = repos[best]
+      repos[best] = tmp
+      if scores.length() > 0 {
+        let st = scores[i]
+        scores[i] = scores[best]
+        scores[best] = st
+      }
+    }
+    i = i + 1
+  }
+  repos
+}
+
+///| 多因子打分：60% 星数（log 尺度归一化）+ 40% 新鲜度（30 天内线性衰减）
+fn compute_scores(repos : Array[Repo], today : Int) -> Array[Double] {
+  let mut max_stars = 0
+  for r in repos {
+    if r.stars > max_stars {
+      max_stars = r.stars
+    }
+  }
+  let scores = []
+  for r in repos {
+    let ns = if max_stars > 0 {
+      @math.log10((r.stars + 1).to_double()) / @math.log10((max_stars + 1).to_double())
+    } else {
+      0.0
+    }
+    let days = today - parse_iso_date(r.updated)
+    let fresh = if days <= 0 {
+      1.0
+    } else if days >= 30 {
+      0.0
+    } else {
+      1.0 - days.to_double() / 30.0
+    }
+    scores.push(0.6 * ns + 0.4 * fresh)
+  }
+  scores
+}
+
+///| 解析 ISO 日期（YYYY-MM-DD...）为 epoch 天数；非法返回 -1
+pub fn parse_iso_date(iso : String) -> Int {
+  if iso.length() < 10 {
+    return -1
+  }
+  let y = try {
+    @string.parse_int(iso[0:4])
+  } catch {
+    _ => -1
+  }
+  let m = try {
+    @string.parse_int(iso[5:7])
+  } catch {
+    _ => -1
+  }
+  let d = try {
+    @string.parse_int(iso[8:10])
+  } catch {
+    _ => -1
+  }
+  if y < 0 || m < 1 || m > 12 || d < 1 || d > 31 {
+    -1
+  } else {
+    days_from_civil(y, m, d)
+  }
+}
+
+///| 公历日期 → epoch 天数（civil days 算法）
+pub fn days_from_civil(y : Int, m : Int, d : Int) -> Int {
+  let yy = if m <= 2 { y - 1 } else { y }
+  let era = (if yy >= 0 { yy } else { yy - 399 }) / 400
+  let yoe = yy - era * 400
+  let mp = (m + 9) % 12
+  let doy = (153 * mp + 2) / 5 + d - 1
+  let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy
+  era * 146097 + doe - 719468
 }
 
 ///| 按条件筛选项目：语言（大小写不敏感）/ 最低星数 / 最高星数 / 关键词（名称或描述，大小写不敏感）
