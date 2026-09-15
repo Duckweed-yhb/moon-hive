@@ -204,6 +204,45 @@ test {
 }
 
 test {
+  // stats：基本结构完整
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":5,\"language\":\"MoonBit\",\"updated_at\":\"2026-09-14T00:00:00Z\"},{\"name\":\"b\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":50,\"language\":\"Python\",\"updated_at\":\"2026-09-01T00:00:00Z\"},{\"name\":\"c\",\"description\":\"\",\"html_url\":\"https://x/c\",\"stargazers_count\":0,\"language\":\"MoonBit\",\"updated_at\":\"2020-01-01T00:00:00Z\"}]"
+  let out = stats(repos)
+  assert_true(out.contains("语言分布"))
+  assert_true(out.contains("星数分档"))
+  assert_true(out.contains("更新活跃度"))
+  assert_true(out.contains("汇总"))
+}
+
+test {
+  // stats：语言分布计数与未标注处理
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"MoonBit\",\"updated_at\":\"\"},{\"name\":\"b\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":1,\"language\":\"MoonBit\",\"updated_at\":\"\"},{\"name\":\"c\",\"description\":\"\",\"html_url\":\"https://x/c\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = stats(repos)
+  assert_true(out.contains("MoonBit"))
+  assert_true(out.contains("2 (66%)"))
+  assert_true(out.contains("未标注"))
+}
+
+test {
+  // stats：星数分档正确
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":0,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"b\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":5,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"c\",\"description\":\"\",\"html_url\":\"https://x/c\",\"stargazers_count\":50,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"d\",\"description\":\"\",\"html_url\":\"https://x/d\",\"stargazers_count\":500,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = stats(repos)
+  assert_true(out.contains("⭐0       1"))
+  assert_true(out.contains("⭐1-10    1"))
+  assert_true(out.contains("⭐11-100  1"))
+  assert_true(out.contains("⭐101+    1"))
+}
+
+test {
+  // stats：汇总数字与空输入
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":5,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"b\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":15,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = stats(repos)
+  assert_true(out.contains("总星数 20"))
+  assert_true(out.contains("平均 10"))
+  assert_true(out.contains("最多 b(15)"))
+  assert_true(stats("[]").contains("没有可统计的项目"))
+}
+
+test {
   // digest：空数组返回提示
   inspect(digest("[]"), content="（没有可推荐的项目）")
 }

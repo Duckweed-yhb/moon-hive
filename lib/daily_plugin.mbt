@@ -52,6 +52,13 @@ pub impl Plugin for DailyPlugin with execute(_self, command, args) {
         export_md(args[0])
       }
     }
+    "stats" => {
+      if args.length() < 1 {
+        "用法: moon run cmd/main daily stats '<项目JSON>'\n支持直接 JSON 或 Base64 编码的 JSON"
+      } else {
+        stats(args[0])
+      }
+    }
     "summary" => {
       if args.length() < 1 {
         "用法: moon run cmd/main daily summary '<项目JSON>'\n支持直接 JSON 或 Base64 编码的 JSON"
@@ -109,7 +116,7 @@ pub impl Plugin for DailyPlugin with execute(_self, command, args) {
         filter(args[0], lang, min, max, kw)
       }
     }
-    _ => "未知命令: \{command}（支持: digest / filter / keep / export）"
+    _ => "未知命令: \{command}（支持: digest / summary / filter / keep / export / stats）"
   }
 }
 
@@ -802,5 +809,137 @@ fn type_of(r : Repo) -> String {
     "游戏"
   } else {
     "项目"
+  }
+}
+
+///| 生态统计：语言分布（条形图）/ 星数分档 / 更新活跃度 / 汇总
+pub fn stats(json_str : String) -> String {
+  match parse_repo_list(json_str) {
+    Ok(repos) => {
+      if repos.length() == 0 {
+        return "（没有可统计的项目）"
+      }
+      let today = (@env.now() / 86400000UL).to_int()
+      let n = repos.length()
+      let buf = StringBuilder()
+      buf.write_string("生态统计（\{n} 个项目）\n")
+      buf.write_string(dash_line(46) + "\n")
+
+      // 语言分布（按数量降序 + 条形图）
+      buf.write_string("语言分布：\n")
+      let lnames : Array[String] = []
+      let lcounts : Array[Int] = []
+      for r in repos {
+        let l = if r.lang == "" { "未标注" } else { r.lang }
+        let mut found = false
+        let mut k = 0
+        while k < lnames.length() {
+          if lnames[k] == l {
+            lcounts[k] = lcounts[k] + 1
+            found = true
+          }
+          k = k + 1
+        }
+        if !found {
+          lnames.push(l)
+          lcounts.push(1)
+        }
+      }
+      sort_desc(lnames, lcounts)
+      let mut i = 0
+      while i < lnames.length() {
+        let bar_len = lcounts[i] * 10 / n
+        let bar = StringBuilder()
+        let mut b = 0
+        while b < bar_len {
+          bar.write_string("█")
+          b = b + 1
+        }
+        buf.write_string("  \{lnames[i]}  \{bar.to_string()}\{lcounts[i]} (\{lcounts[i] * 100 / n}%)\n")
+        i = i + 1
+      }
+      buf.write_string("\n")
+
+      // 星数分档
+      let mut b0 = 0
+      let mut b1 = 0
+      let mut b2 = 0
+      let mut b3 = 0
+      let mut total_stars = 0
+      let mut max_stars = 0
+      let mut max_name = ""
+      for r in repos {
+        total_stars = total_stars + r.stars
+        if r.stars > max_stars {
+          max_stars = r.stars
+          max_name = r.name
+        }
+        if r.stars == 0 {
+          b0 = b0 + 1
+        } else if r.stars <= 10 {
+          b1 = b1 + 1
+        } else if r.stars <= 100 {
+          b2 = b2 + 1
+        } else {
+          b3 = b3 + 1
+        }
+      }
+      buf.write_string("星数分档：\n")
+      buf.write_string("  ⭐0       \{b0}\n")
+      buf.write_string("  ⭐1-10    \{b1}\n")
+      buf.write_string("  ⭐11-100  \{b2}\n")
+      buf.write_string("  ⭐101+    \{b3}\n")
+      buf.write_string("\n")
+
+      // 更新活跃度
+      let mut f7 = 0
+      let mut f30 = 0
+      let mut fold = 0
+      for r in repos {
+        let days = today - parse_iso_date(r.updated)
+        if days <= 7 {
+          f7 = f7 + 1
+        } else if days <= 30 {
+          f30 = f30 + 1
+        } else {
+          fold = fold + 1
+        }
+      }
+      buf.write_string("更新活跃度：\n")
+      buf.write_string("  7 天内    \{f7}\n")
+      buf.write_string("  8-30 天   \{f30}\n")
+      buf.write_string("  更久      \{fold}\n")
+      buf.write_string("\n")
+
+      // 汇总
+      buf.write_string("汇总：\{n} 个项目 · 总星数 \{total_stars} · 平均 \{total_stars / n} · 最多 \{max_name}(\{max_stars})\n")
+      buf.to_string()
+    }
+    Err(msg) => msg
+  }
+}
+
+///| 按 count 降序同步排序 keys/vals（选择排序）
+fn sort_desc(keys : Array[String], vals : Array[Int]) -> Unit {
+  let n = vals.length()
+  let mut i = 0
+  while i < n {
+    let mut best = i
+    let mut j = i + 1
+    while j < n {
+      if vals[j] > vals[best] {
+        best = j
+      }
+      j = j + 1
+    }
+    if best != i {
+      let tk = keys[i]
+      keys[i] = keys[best]
+      keys[best] = tk
+      let tv = vals[i]
+      vals[i] = vals[best]
+      vals[best] = tv
+    }
+    i = i + 1
   }
 }
