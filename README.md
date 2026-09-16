@@ -5,9 +5,6 @@
 
 > 每日 GitHub 项目投喂 · digest / summary / filter / keep / export / stats / random / compare · 纯 core 零依赖 · 51 个测试
 
-参赛：MoonBit 2026 九月黑客松
-赛道：应用与内容工具
-
 ## 📖 项目简介
 
 项目名 MoonHive：Moon 代表 MoonBit，Hive（蜂巢）寓意插件如同蜂巢中的独立巢室，可持续扩展。
@@ -16,7 +13,7 @@
 ### 背景与目标
 
 - 解决的真实问题：零散命令行工具相互独立，难以统一管理；本项目提供统一 CLI 基座，新增功能只需开发独立插件并注册，无需改动基座核心代码。
-- 项目边界（本次开发范围）：插件基座 + Base64 / Hex 字符串编解码插件 + **Daily 每日 GitHub 项目投喂插件**（digest 推荐 / summary 摘要 / filter 筛选 / keep 收藏 / export 导出 / stats 统计 / random 随机 / compare 对比 + daily.ps1 数据管道），配套 51 个单元测试与可运行 Demo。
+- 项目边界（当前版本）：插件基座 + Base64 / Hex 字符串编解码插件 + **Daily 每日 GitHub 项目投喂插件**（digest 推荐 / summary 摘要 / filter 筛选 / keep 收藏 / export 导出 / stats 统计 / random 随机 / compare 对比 + daily.ps1 数据管道），配套 51 个单元测试与可运行 Demo。
 - 不做什么：不实现运行时动态加载插件；文件编解码、Web、嵌入式、CTF 其余工具仅作为后续规划，本次不编码；不实现 TUI、配置文件、命令补全。
 
 ## ✨ 核心功能
@@ -35,7 +32,7 @@
 - [x] **export 导出**：收藏清单 → Markdown（按星数降序），可直接贴进 README / 备忘录
 - [x] 配套数据管道 `daily.ps1`：拉取 GitHub Search API → 精简字段 → Base64 编码 → digest 展示 → 输入编号收藏 → 保存 favorites.json → 可选导出 Markdown（完整闭环）
 - [x] 单元测试：51 个用例覆盖编码/解码往返、中文、空串、非法输入、JSON 解析、收藏去重、导出格式、多维筛选、推荐排序、随机抽取、项目对比、项目摘要与生态统计（`moon test` 全部通过）
-- [ ] 可选扩展（本次不做，后续迭代）
+- [ ] 可选扩展（当前版本不做，后续迭代）
   - Web 工具插件：HTTP 请求、JSON 格式化、URL 编解码
   - 电气嵌入式插件：电路计算器、仿真日志解析
   - CTF 密码插件：凯撒密码、ROT13、字符频率统计
@@ -227,10 +224,3 @@ moon-hive/
 - [x] stats 生态统计（语言分布 / 星数分档 / 更新活跃度）
 - [x] random 随机推荐 + compare 项目对比
 - [ ] daily.ps1 参数化（--sort / --filter 透传）与一键导出
-
-## 🤖 AI 参与说明（赛事必填）
-
-赛事要求：可使用 AI 辅助，但必须写清楚 AI 参与范围，参赛人掌握全部逻辑。
-- AI 参与部分：代码片段生成、文档撰写、测试用例构思
-- 参赛者掌握：全部业务逻辑、代码结构，能够完整解释所有实现细节
-- 未直接复制成品，全部代码经过人工审阅、修改、调试
