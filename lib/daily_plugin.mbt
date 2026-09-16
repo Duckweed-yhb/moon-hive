@@ -15,7 +15,7 @@ pub impl Plugin for DailyPlugin with name(_self) {
 
 ///|
 pub impl Plugin for DailyPlugin with description(_self) {
-  "每日 GitHub 项目投喂：digest 推荐 / keep 收藏 / export 导出 Markdown"
+  "每日 GitHub 项目投喂：digest 推荐 / random 随机 / compare 对比 / keep 收藏 / export 导出"
 }
 
 ///|
@@ -116,7 +116,34 @@ pub impl Plugin for DailyPlugin with execute(_self, command, args) {
         filter(args[0], lang, min, max, kw)
       }
     }
-    _ => "未知命令: \{command}（支持: digest / summary / filter / keep / export / stats）"
+    "random" => {
+      if args.length() < 1 {
+        "用法: moon run cmd/main daily random <项目JSON> [--count 数量]\n示例: daily random '<json>' --count 5\n支持直接 JSON 或 Base64 编码的 JSON"
+      } else {
+        let mut count = 3
+        let mut i = 1
+        while i < args.length() {
+          if args[i] == "--count" && i + 1 < args.length() {
+            count = try {
+              @string.parse_int(args[i + 1])
+            } catch {
+              _ => 3
+            }
+            i = i + 1
+          }
+          i = i + 1
+        }
+        random(args[0], count)
+      }
+    }
+    "compare" => {
+      if args.length() < 3 {
+        "用法: moon run cmd/main daily compare <项目JSON> <A编号或名称> <B编号或名称>\n示例: daily compare '<json>' 1 2"
+      } else {
+        compare(args[0], args[1], args[2])
+      }
+    }
+    _ => "未知命令: \{command}（支持: digest / summary / filter / keep / export / stats / random / compare）"
   }
 }
 
@@ -942,4 +969,102 @@ fn sort_desc(keys : Array[String], vals : Array[Int]) -> Unit {
     }
     i = i + 1
   }
+}
+
+///| 随机推荐：从项目列表中随机抽取 N 个（LCG 伪随机，纯 core 自研，不重复）
+///| seed 可选：默认用当前时间毫秒做种子；传固定 seed 可复现（用于测试）
+pub fn random(json_str : String, count : Int, seed? : UInt64 = 0UL) -> String {
+  let repos = match parse_repo_list(json_str) {
+    Ok(r) => r
+    Err(msg) => return msg
+  }
+  if repos.length() == 0 {
+    return "（没有可随机推荐的项目）"
+  }
+  let n = if count <= 0 { 3 } else { count }
+  let mut s = if seed == 0UL { @env.now() } else { seed }
+  let picked = []
+  while picked.length() < n && picked.length() < repos.length() {
+    s = lcg_next(s)
+    let idx = (s % repos.length().to_uint64()).to_int()
+    if !picked.contains(idx) {
+      picked.push(idx)
+    }
+  }
+  let out = []
+  for idx in picked {
+    out.push(repos[idx])
+  }
+  render_cards(out, "随机推荐（不按分数，换换口味）")
+}
+
+///| 线性同余生成器（LCG）：next = (a * seed + c) & (2^63 - 1)，UInt64 乘法自动回绕
+fn lcg_next(seed : UInt64) -> UInt64 {
+  (6364136223846793005UL * seed + 1442695040888963407UL) & 0x7FFFFFFFFFFFFFFFUL
+}
+
+///| 项目对比：两个项目（编号 1..N 或项目名称）逐字段对比输出
+pub fn compare(json_str : String, a_key : String, b_key : String) -> String {
+  let repos = match parse_repo_list(json_str) {
+    Ok(r) => r
+    Err(msg) => return msg
+  }
+  if repos.length() < 2 {
+    return "（项目太少：至少需要 2 个项目才能对比）"
+  }
+  let a = find_repo(repos, a_key)
+  let b = find_repo(repos, b_key)
+  if a is None {
+    return "（找不到项目: \{a_key}，可用编号 1..\{repos.length()} 或项目名称）"
+  }
+  if b is None {
+    return "（找不到项目: \{b_key}，可用编号 1..\{repos.length()} 或项目名称）"
+  }
+  let (ra, rb) = match (a, b) {
+    (Some(x), Some(y)) => (x, y)
+    _ => (
+      Repo::{ name: "", desc: "", url: "", stars: 0, lang: "", updated: "" },
+      Repo::{ name: "", desc: "", url: "", stars: 0, lang: "", updated: "" },
+    )
+  }
+  let buf = StringBuilder()
+  buf.write_string("对比：\{ra.name}  vs  \{rb.name}\n")
+  buf.write_string(dash_line(46) + "\n")
+  buf.write_string("星数：   ⭐\{ra.stars}  vs  ⭐\{rb.stars}\n")
+  buf.write_string("语言：   \{fmt_or(ra.lang)}  vs  \{fmt_or(rb.lang)}\n")
+  buf.write_string("更新：   \{fmt_or(ra.updated)}  vs  \{fmt_or(rb.updated)}\n")
+  buf.write_string("描述：   \{fmt_or(ra.desc)}  vs  \{fmt_or(rb.desc)}\n")
+  buf.write_string("链接：   \{fmt_or(ra.url)}  vs  \{fmt_or(rb.url)}\n")
+  buf.write_string("\n")
+  if ra.stars > rb.stars {
+    buf.write_string("→ \{ra.name} 更受欢迎（⭐\{ra.stars} > ⭐\{rb.stars}）\n")
+  } else if rb.stars > ra.stars {
+    buf.write_string("→ \{rb.name} 更受欢迎（⭐\{rb.stars} > ⭐\{ra.stars}）\n")
+  } else {
+    buf.write_string("→ 两者星数相当\n")
+  }
+  buf.to_string()
+}
+
+///| 按编号（1..N）或名称查找项目
+fn find_repo(repos : Array[Repo], key : String) -> Option[Repo] {
+  let ids = parse_ids(key)
+  if ids.length() > 0 {
+    let id = ids[0]
+    if id >= 1 && id <= repos.length() {
+      return Some(repos[id - 1])
+    }
+    return None
+  }
+  for r in repos {
+    if r.name == key {
+      return Some(r)
+    }
+  }
+  None
+}
+
+///| 空字符串显示为 "-"
+fn fmt_or(s : String) -> String {
+  if s == "" { "-" } else { s }
 }

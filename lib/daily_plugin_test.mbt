@@ -198,8 +198,9 @@ test {
 }
 
 test {
-  // summary：相对更新时间（昨天 → 昨天）
-  let repos = "[{\"name\":\"a\",\"description\":\"demo\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"2026-09-14T00:00:00Z\"}]"
+  // summary：相对更新时间（昨天，动态计算昨天日期，避免测试随日期过期）
+  let yesterday = millis_to_date(@env.now() - 86400000UL)
+  let repos = "[{\"name\":\"a\",\"description\":\"demo\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\{yesterday}T00:00:00Z\"}]"
   assert_true(summary(repos).contains("更新：昨天"))
 }
 
@@ -257,4 +258,67 @@ test {
 test {
   // digest：既不是 JSON 也不是 Base64 时给出明确提示
   assert_true(digest("@@@").has_prefix("（参数解析失败"))
+}
+
+test {
+  // random：空数组返回提示
+  assert_true(random("[]", 3).contains("没有可随机推荐"))
+}
+
+test {
+  // random：固定 seed 可复现（确定性），抽取 2 个不同项目
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"b\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":2,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"c\",\"description\":\"\",\"html_url\":\"https://x/c\",\"stargazers_count\":3,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out1 = random(repos, 2, seed=123UL)
+  let out2 = random(repos, 2, seed=123UL)
+  let same = out1 == out2
+  assert_true(same)                 // 同 seed → 结果一致（确定性）
+  assert_true(out1.contains("2 个项目"))
+  assert_true(out1.contains("c"))   // 抽到了 c
+  assert_true(out1.contains("a"))   // 抽到了 a
+}
+
+test {
+  // random：count 超过数量时全部返回（去重，不重复抽）
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"b\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":2,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = random(repos, 99, seed=42UL)
+  assert_true(out.contains("2 个项目"))
+  assert_true(out.contains("a"))
+  assert_true(out.contains("b"))
+}
+
+test {
+  // random：count 非法（<=0）时回退默认 3
+  let repos = "[{\"name\":\"a\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"b\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":2,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"c\",\"description\":\"\",\"html_url\":\"https://x/c\",\"stargazers_count\":3,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"d\",\"description\":\"\",\"html_url\":\"https://x/d\",\"stargazers_count\":4,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"e\",\"description\":\"\",\"html_url\":\"https://x/e\",\"stargazers_count\":5,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = random(repos, -1, seed=7UL)
+  assert_true(out.contains("3 个项目"))
+}
+
+test {
+  // compare：按编号对比，包含两个项目名与星数
+  let repos = "[{\"name\":\"alpha\",\"description\":\"a lib\",\"html_url\":\"https://x/a\",\"stargazers_count\":68,\"language\":\"MoonBit\",\"updated_at\":\"\"},{\"name\":\"beta\",\"description\":\"b tool\",\"html_url\":\"https://x/b\",\"stargazers_count\":12,\"language\":\"Rust\",\"updated_at\":\"\"}]"
+  let out = compare(repos, "1", "2")
+  assert_true(out.contains("alpha  vs  beta"))
+  assert_true(out.contains("⭐68"))
+  assert_true(out.contains("⭐12"))
+  assert_true(out.contains("alpha 更受欢迎"))
+}
+
+test {
+  // compare：按名称对比 + 星数判断反向
+  let repos = "[{\"name\":\"alpha\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":5,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"beta\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":99,\"language\":\"\",\"updated_at\":\"\"}]"
+  let out = compare(repos, "alpha", "beta")
+  assert_true(out.contains("beta 更受欢迎"))
+}
+
+test {
+  // compare：编号越界给出明确提示
+  let repos = "[{\"name\":\"alpha\",\"description\":\"\",\"html_url\":\"https://x/a\",\"stargazers_count\":5,\"language\":\"\",\"updated_at\":\"\"},{\"name\":\"beta\",\"description\":\"\",\"html_url\":\"https://x/b\",\"stargazers_count\":9,\"language\":\"\",\"updated_at\":\"\"}]"
+  assert_true(compare(repos, "9", "2").contains("找不到项目: 9"))
+  assert_true(compare(repos, "alpha", "nope").contains("找不到项目: nope"))
+}
+
+test {
+  // compare：项目少于 2 个时提示
+  let repos = "[{\"name\":\"only\",\"description\":\"\",\"html_url\":\"https://x/o\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"}]"
+  assert_true(compare(repos, "1", "1").contains("至少需要 2 个项目"))
 }

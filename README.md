@@ -14,7 +14,7 @@
 ### 背景与目标
 
 - 解决的真实问题：零散命令行工具相互独立，难以统一管理；本项目提供统一 CLI 基座，新增功能只需开发独立插件并注册，无需改动基座核心代码。
-- 项目边界（本次开发范围）：插件基座 + Base64 / Hex 字符串编解码插件 + **Daily 每日 GitHub 项目投喂插件**（digest 推荐 / summary 摘要 / filter 筛选 / keep 收藏 / export 导出 / stats 统计 + daily.ps1 数据管道），配套 43 个单元测试与可运行 Demo。
+- 项目边界（本次开发范围）：插件基座 + Base64 / Hex 字符串编解码插件 + **Daily 每日 GitHub 项目投喂插件**（digest 推荐 / summary 摘要 / filter 筛选 / keep 收藏 / export 导出 / stats 统计 / random 随机 / compare 对比 + daily.ps1 数据管道），配套 51 个单元测试与可运行 Demo。
 - 不做什么：不实现运行时动态加载插件；文件编解码、Web、嵌入式、CTF 其余工具仅作为后续规划，本次不编码；不实现 TUI、配置文件、命令补全。
 
 ## ✨ 核心功能
@@ -28,9 +28,11 @@
 - [x] **多因子推荐排序**：digest 默认按 score 打分排序（60% 星数 log 归一化 + 40% 新鲜度衰减），支持 `--sort stars` / `--sort updated` / `--sort none`
 - [x] **keep 收藏管理**：按编号从推荐中选取项目，与旧收藏按 url 合并去重，输出最新收藏 JSON
 - [x] **filter 多维筛选**：按语言（大小写不敏感）/ 最低星数 / 最高星数 / 关键词（名称或描述）组合过滤
+- [x] **random 随机推荐**：不按分数、随机抽取 N 个项目（自研 LCG 伪随机，纯 core 零依赖），每天换换口味
+- [x] **compare 项目对比**：两个项目（编号或名称）逐字段对比 + 结论（星数/语言/更新时间/描述/链接）
 - [x] **export 导出**：收藏清单 → Markdown（按星数降序），可直接贴进 README / 备忘录
 - [x] 配套数据管道 `daily.ps1`：拉取 GitHub Search API → 精简字段 → Base64 编码 → digest 展示 → 输入编号收藏 → 保存 favorites.json → 可选导出 Markdown（完整闭环）
-- [x] 单元测试：43 个用例覆盖编码/解码往返、中文、空串、非法输入、JSON 解析、收藏去重、导出格式、多维筛选、推荐排序、项目摘要与生态统计（`moon test` 全部通过）
+- [x] 单元测试：51 个用例覆盖编码/解码往返、中文、空串、非法输入、JSON 解析、收藏去重、导出格式、多维筛选、推荐排序、随机抽取、项目对比、项目摘要与生态统计（`moon test` 全部通过）
 - [ ] 可选扩展（本次不做，后续迭代）
   - Web 工具插件：HTTP 请求、JSON 格式化、URL 编解码
   - 电气嵌入式插件：电路计算器、仿真日志解析
@@ -78,6 +80,12 @@ moon run cmd/main daily stats '<项目JSON>'
 
 # 筛选：按语言/星数/关键词组合过滤（支持大小写不敏感）
 moon run cmd/main daily filter '<项目JSON>' --lang MoonBit --min 10 --max 100 --kw async
+
+# 随机推荐：从列表中随机抽 N 个（--count 可选，默认 3）
+moon run cmd/main daily random '<项目JSON>' --count 5
+
+# 项目对比：两个项目按编号或名称对比
+moon run cmd/main daily compare '<项目JSON>' 1 2
 
 # 导出收藏为 Markdown
 moon run cmd/main daily export '<收藏JSON>'
@@ -215,7 +223,7 @@ moon-hive/
 - [x] Daily 每日 GitHub 项目投喂：digest / keep / export（数据管道闭环）
 - [x] filter 多维筛选 + summary 项目摘要 + 多因子推荐排序
 - [x] stats 生态统计（语言分布 / 星数分档 / 更新活跃度）
-- [ ] random 随机推荐 + compare 项目对比
+- [x] random 随机推荐 + compare 项目对比
 - [ ] daily.ps1 参数化（--sort / --filter 透传）与一键导出
 
 ## 🤖 AI 参与说明（赛事必填）
