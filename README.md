@@ -3,13 +3,15 @@
 [![CI](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml/badge.svg)](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+> 每日 GitHub 项目投喂 · digest / summary / filter / keep / export / stats / random / compare · 纯 core 零依赖 · 51 个测试
+
 参赛：MoonBit 2026 九月黑客松
 赛道：应用与内容工具
 
 ## 📖 项目简介
 
 项目名 MoonHive：Moon 代表 MoonBit，Hive（蜂巢）寓意插件如同蜂巢中的独立巢室，可持续扩展。
-一句话描述项目：基于 MoonBit 实现的插件化 CLI 工具基座，采用"万物皆插件"架构，已实现 Base64、Hex 字符串编解码插件，以及 **每日 GitHub 项目投喂插件**（digest 推荐引擎 + daily.ps1 数据管道），可持续扩展新插件。
+一句话描述项目：基于 MoonBit 实现的插件化 CLI 工具基座，采用"万物皆插件"架构；核心插件为 **Daily 每日 GitHub 项目投喂**（digest 推荐 / summary 摘要 / filter 筛选 / keep 收藏 / export 导出 / stats 统计 / random 随机 / compare 对比 + daily.ps1 数据管道），并内置 Base64、Hex 编解码示例插件，可持续扩展新插件。
 
 ### 背景与目标
 
