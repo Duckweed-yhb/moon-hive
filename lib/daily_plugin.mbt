@@ -68,12 +68,13 @@ pub impl Plugin for DailyPlugin with execute(_self, command, args) {
     }
     "filter" => {
       if args.length() < 1 {
-        "用法: moon run cmd/main daily filter <项目JSON> [--lang 语言] [--min 星数] [--max 星数] [--kw 关键词]\n示例: daily filter '<json>' --lang MoonBit --min 10 --kw async"
+        "用法: moon run cmd/main daily filter <项目JSON> [--lang 语言] [--min 星数] [--max 星数] [--kw 关键词] [--json]\n示例: daily filter '<json>' --lang MoonBit --min 10 --kw async\n--json: 输出纯 JSON（供脚本管道复用）"
       } else {
         let mut lang = ""
         let mut min = 0
         let mut max = 0
         let mut kw = ""
+        let mut json_mode = false
         let mut i = 1
         while i < args.length() {
           match args[i] {
@@ -109,11 +110,18 @@ pub impl Plugin for DailyPlugin with execute(_self, command, args) {
                 i = i + 1
               }
             }
+            "--json" => {
+              json_mode = true
+            }
             _ => ()
           }
           i = i + 1
         }
-        filter(args[0], lang, min, max, kw)
+        if json_mode {
+          filter_json(args[0], lang, min, max, kw)
+        } else {
+          filter(args[0], lang, min, max, kw)
+        }
       }
     }
     "random" => {
@@ -392,6 +400,64 @@ pub fn filter(
     return "（没有符合筛选条件的项目）"
   }
   render_cards(filtered, "筛选结果（条件: \{describe_cond(lang, min_stars, max_stars, keyword)}）")
+}
+
+///| 按条件筛选项目，返回纯 JSON 数组字符串（供脚本管道复用，如 daily.ps1 筛选后重新编码）
+pub fn filter_json(
+  repos_str : String,
+  lang : String,
+  min_stars : Int,
+  max_stars : Int,
+  keyword : String,
+) -> String {
+  let repos = match parse_repo_list(repos_str) {
+    Ok(r) => r
+    Err(msg) => return msg
+  }
+  let l = lang.to_lower()
+  let k = keyword.to_lower()
+  let filtered = []
+  for r in repos {
+    let mut ok = true
+    if l != "" && r.lang.to_lower() != l {
+      ok = false
+    }
+    if ok && min_stars > 0 && r.stars < min_stars {
+      ok = false
+    }
+    if ok && max_stars > 0 && r.stars > max_stars {
+      ok = false
+    }
+    if ok && k != "" && !r.name.to_lower().contains(k) && !r.desc.to_lower().contains(k) {
+      ok = false
+    }
+    if ok {
+      filtered.push(r)
+    }
+  }
+  if filtered.length() == 0 {
+    return "[]"
+  }
+  repos_to_json(filtered)
+}
+
+///| 把项目列表渲染为 JSON 数组字符串（字段与 GitHub API 输入保持一致，供 digest 等命令直接复用）
+fn repos_to_json(repos : Array[Repo]) -> String {
+  let buf = StringBuilder()
+  buf.write_string("[")
+  let mut i = 0
+  while i < repos.length() {
+    let r = repos[i]
+    buf.write_string(
+      "{\"name\":\"\{escape_json(r.name)}\",\"description\":\"\{escape_json(r.desc)}\",\"html_url\":\"\{escape_json(r.url)}\",\"stargazers_count\":\{r.stars},\"language\":\"\{escape_json(r.lang)}\",\"updated_at\":\"\{escape_json(r.updated)}\"}",
+    )
+    if i < repos.length() - 1 {
+      buf.write_string(",")
+    }
+    i = i + 1
+  }
+  buf.write_string("]")
+  buf.to_string()
 }
 
 ///| 描述筛选条件（用于结果标题）

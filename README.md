@@ -30,7 +30,7 @@
 - [x] **random 随机推荐**：不按分数、随机抽取 N 个项目（自研 LCG 伪随机，纯 core 零依赖），每天换换口味
 - [x] **compare 项目对比**：两个项目（编号或名称）逐字段对比 + 结论（星数/语言/更新时间/描述/链接）
 - [x] **export 导出**：收藏清单 → Markdown（按星数降序），可直接贴进 README / 备忘录
-- [x] 配套数据管道 `daily.ps1`：拉取 GitHub Search API → 精简字段 → Base64 编码 → digest 展示 → 输入编号收藏 → 保存 favorites.json → 可选导出 Markdown（完整闭环）
+- [x] 配套数据管道 `daily.ps1`：拉取 GitHub Search API → 精简字段 → Base64 编码 → digest 展示 → 输入编号收藏 → 保存 favorites.json → 可选导出 Markdown（完整闭环）；支持参数化：`-Sort`（score/stars/updated/none）、`-Count`、`-Query`、`-Lang/-Min/-Max/-Kw`（筛选透传）、`-Export`（一键导出）
 - [x] 单元测试：51 个用例覆盖编码/解码往返、中文、空串、非法输入、JSON 解析、收藏去重、导出格式、多维筛选、推荐排序、随机抽取、项目对比、项目摘要与生态统计（`moon test` 全部通过）
 - [ ] 可选扩展（当前版本不做，后续迭代）
   - Web 工具插件：HTTP 请求、JSON 格式化、URL 编解码
@@ -63,6 +63,10 @@ moon run cmd/main hex decode "68656c6c6f"
 
 # 每日 GitHub 项目投喂（推荐用法：运行配套脚本 daily.ps1）
 powershell -ExecutionPolicy Bypass -File daily.ps1
+
+# daily.ps1 参数化：按星数排序 / 看 10 个 / 只留 MoonBit 且 >=100 星 / 关键词 ui / 一键导出
+powershell -ExecutionPolicy Bypass -File daily.ps1 -Sort stars -Count 10 -Lang MoonBit -Min 100 -Kw ui -Export
+# 参数一览：-Query 搜索条件 / -Count 数量 / -Sort score|stars|updated|none / -Lang 语言 / -Min 最低星 / -Max 最高星 / -Kw 关键词 / -Export 一键导出
 
 # 也可以直接调用 digest（参数为 JSON 文本或 Base64 编码的 JSON，--sort 可选）
 moon run cmd/main daily digest '[{"name":"demo","stargazers_count":42,"language":"MoonBit"}]'
@@ -223,4 +227,4 @@ moon-hive/
 - [x] filter 多维筛选 + summary 项目摘要 + 多因子推荐排序
 - [x] stats 生态统计（语言分布 / 星数分档 / 更新活跃度）
 - [x] random 随机推荐 + compare 项目对比
-- [ ] daily.ps1 参数化（--sort / --filter 透传）与一键导出
+- [x] daily.ps1 参数化（-Sort / -Count / -Query / -Lang / -Min / -Max / -Kw / -Export）
