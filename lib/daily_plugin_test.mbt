@@ -322,3 +322,56 @@ test {
   let repos = "[{\"name\":\"only\",\"description\":\"\",\"html_url\":\"https://x/o\",\"stargazers_count\":1,\"language\":\"\",\"updated_at\":\"\"}]"
   assert_true(compare(repos, "1", "1").contains("至少需要 2 个项目"))
 }
+
+test {
+  // why_reason：高星 + 活跃 + MoonBit → 热门项目 + MoonBit 原生 + 今天刚更新
+  let r = Repo::{ name: "hot", desc: "", url: "", stars: 150, lang: "MoonBit", updated: "2026-09-19" }
+  let out = why_reason(r, 0)
+  assert_true(out.contains("值得跟进"))
+  assert_true(out.contains("MoonBit 原生"))
+  assert_true(out.contains("今天刚更新"))
+}
+
+test {
+  // why_reason：低星 + 活跃 → 趁早关注
+  let r = Repo::{ name: "new", desc: "", url: "", stars: 5, lang: "", updated: "" }
+  assert_true(why_reason(r, 1).contains("趁早关注"))
+}
+
+test {
+  // why_reason：高星 + 放缓 → 成熟项目
+  let r = Repo::{ name: "old", desc: "", url: "", stars: 200, lang: "", updated: "" }
+  assert_true(why_reason(r, 60).contains("成熟项目"))
+}
+
+test {
+  // why_reason：低星 + 放缓 → 早期探索
+  let r = Repo::{ name: "tiny", desc: "", url: "", stars: 2, lang: "", updated: "" }
+  assert_true(why_reason(r, 90).contains("早期探索"))
+}
+
+test {
+  // why_reason：描述含 cli → 工具链方向 + 中间星数活跃 → 正在成长
+  let r = Repo::{ name: "t", desc: "a command line utility", url: "", stars: 50, lang: "", updated: "" }
+  let out = why_reason(r, 5)
+  assert_true(out.contains("工具链方向"))
+  assert_true(out.contains("正在成长"))
+}
+
+test {
+  // why_reason：千星 → 生态级
+  let r = Repo::{ name: "big", desc: "", url: "", stars: 1500, lang: "", updated: "" }
+  assert_true(why_reason(r, 0).contains("千星"))
+}
+
+test {
+  // digest --why：卡片包含推荐理由行（弱断言，不依赖运行日期）
+  let out = digest("[{\"name\":\"demo\",\"description\":\"a cli tool\",\"html_url\":\"https://github.com/x/demo\",\"stargazers_count\":42,\"language\":\"MoonBit\",\"updated_at\":\"2026-09-19T00:00:00Z\"}]", why=true)
+  assert_true(out.contains("💡"))
+}
+
+test {
+  // digest 默认不带 --why：输出保持原样，不出现推荐理由
+  let out = digest("[{\"name\":\"demo\",\"description\":\"x\",\"html_url\":\"https://github.com/x/demo\",\"stargazers_count\":42,\"language\":\"MoonBit\",\"updated_at\":\"2026-09-19T00:00:00Z\"}]")
+  assert_true(!out.contains("💡"))
+}

@@ -23,18 +23,21 @@ pub impl Plugin for DailyPlugin with execute(_self, command, args) {
   match command {
     "digest" => {
       if args.length() < 1 {
-        "用法: moon run cmd/main daily digest '<项目JSON>' [--sort score|stars|updated|none]\n支持直接 JSON 或 Base64 编码的 JSON"
+        "用法: moon run cmd/main daily digest '<项目JSON>' [--sort score|stars|updated|none] [--why]\n支持直接 JSON 或 Base64 编码的 JSON\n--why: 为每个项目生成一句话推荐理由"
       } else {
         let mut sort_by = "score"
+        let mut why = false
         let mut i = 1
         while i < args.length() {
           if args[i] == "--sort" && i + 1 < args.length() {
             sort_by = args[i + 1]
             i = i + 1
+          } else if args[i] == "--why" {
+            why = true
           }
           i = i + 1
         }
-        digest(args[0], sort_by=sort_by)
+        digest(args[0], sort_by=sort_by, why=why)
       }
     }
     "keep" => {
@@ -249,12 +252,13 @@ pub fn parse_fav_list(json_str : String) -> Result[Array[Faved], String] {
 
 ///| 解析并输出今日推荐卡片（输入支持直接 JSON 或 Base64 编码 JSON）
 ///| sort_by: score（星数+新鲜度加权打分，默认）/ stars / updated / none（保持传入顺序）
-pub fn digest(json_str : String, sort_by? : String = "score") -> String {
+///| why: 为每个项目追加一句话推荐理由（确定性规则，见 why_reason）
+pub fn digest(json_str : String, sort_by? : String = "score", why? : Bool = false) -> String {
   match parse_repo_list(json_str) {
     Ok(repos) => {
       let today = (@env.now() / 86400000UL).to_int()
       let sorted = sort_repos(repos, sort_by, today)
-      render_cards(sorted, "今日推荐")
+      render_cards(sorted, "今日推荐", why=why, today=today)
     }
     Err(msg) => msg
   }
@@ -604,7 +608,8 @@ fn favs_to_json(favs : Array[Faved]) -> String {
 }
 
 ///| 把项目列表渲染成终端推荐卡片
-fn render_cards(repos : Array[Repo], title : String) -> String {
+///| why: 为每个项目追加一行"💡 推荐理由"；today: 用于计算相对更新时间（digest/filter/random 传入）
+fn render_cards(repos : Array[Repo], title : String, why? : Bool = false, today? : Int = -1) -> String {
   if repos.length() == 0 {
     return "（没有可推荐的项目）"
   }
@@ -628,12 +633,106 @@ fn render_cards(repos : Array[Repo], title : String) -> String {
     if r.updated != "" {
       buf.write_string("    更新: " + r.updated + "\n")
     }
+    if why && today >= 0 && r.updated != "" {
+      let days = today - parse_iso_date(r.updated)
+      buf.write_string("    💡 " + why_reason(r, days) + "\n")
+    }
     if i < repos.length() - 1 {
       buf.write_string("\n")
     }
     i = i + 1
   }
   buf.to_string()
+}
+
+///| 推荐理由：结合新鲜度/星数/方向关键词，生成一句话"为什么推荐"（确定性规则，可测试）
+///| days: 距上次更新的天数（0 = 今天更新）
+pub fn why_reason(r : Repo, days : Int) -> String {
+  // 方向识别（名称+描述关键词）
+  let dir = detect_direction(r)
+  // 新鲜度信号
+  let fresh = if days <= 0 {
+    "今天刚更新"
+  } else if days <= 3 {
+    "最近 3 天持续活跃"
+  } else if days <= 7 {
+    "本周有更新"
+  } else if days <= 30 {
+    "近一个月在维护"
+  } else {
+    "更新节奏偏慢"
+  }
+  // 星数信号
+  let star = if r.stars >= 1000 {
+    "生态级千星项目"
+  } else if r.stars >= 100 {
+    "已被社区认可（百星）"
+  } else if r.stars >= 10 {
+    "正在积累口碑"
+  } else {
+    "早期的年轻项目"
+  }
+  // 组合判定句（星数 × 活跃度 决策树）
+  let verdict = if r.stars >= 100 && days <= 7 {
+    "活跃维护的热门项目，值得跟进"
+  } else if r.stars >= 100 && days > 30 {
+    "成熟项目，更新放缓但仍值得参考"
+  } else if r.stars < 10 && days <= 3 {
+    "刚起步的新项目，趁早关注"
+  } else if r.stars < 10 && days > 30 {
+    "早期探索项目，先看看方向"
+  } else if days <= 7 {
+    "正在成长中，社区在持续投入"
+  } else {
+    "有一定积累，可以了解一下"
+  }
+  // 组装：前缀标签（MoonBit 原生 / 方向）+ 新鲜度 + 星数 + 判定句
+  let parts = []
+  if is_moonbit(r) {
+    parts.push("MoonBit 原生")
+  }
+  if dir != "" {
+    parts.push(dir)
+  }
+  parts.push(fresh)
+  parts.push(star)
+  parts.join(" · ") + "：" + verdict
+}
+
+///| 语言是否为 MoonBit（大小写不敏感）
+fn is_moonbit(r : Repo) -> Bool {
+  r.lang.to_lower().contains("moonbit")
+}
+
+///| 从名称+描述识别项目方向（工具链/界面/Web/工程质量/游戏/编译器），未命中返回空串
+fn detect_direction(r : Repo) -> String {
+  let text = (r.name + " " + r.desc).to_lower()
+  if contains_any(text, ["gui", "framework", "component", "react"]) {
+    "界面/框架方向"
+  } else if contains_any(text, ["cli", "command", "tool", "utility"]) {
+    "工具链方向"
+  } else if contains_any(text, ["web", "http", "server", "client"]) {
+    "Web/服务端方向"
+  } else if contains_any(text, ["test", "bench", "quality"]) {
+    "工程质量方向"
+  } else if contains_any(text, ["game", "sprite"]) {
+    "游戏方向"
+  } else if contains_any(text, ["compiler", "parser", "lexer", "interpreter"]) {
+    "编译器/解析器方向"
+  } else {
+    ""
+  }
+}
+
+///| 文本是否包含任一关键词
+fn contains_any(s : String, kws : Array[String]) -> Bool {
+  let mut found = false
+  for kw in kws {
+    if s.contains(kw) {
+      found = true
+    }
+  }
+  found
 }
 
 ///| 解析编号列表字符串（如 "1,3,5"），过滤非法项与重复项
