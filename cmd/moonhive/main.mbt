@@ -25,6 +25,7 @@ fn main {
   match cmd {
     "doctor" => cmd_doctor()
     "inspect" => cmd_inspect(rest)
+    "survey" => cmd_survey(rest)
     "version" | "--version" | "-V" => println(version_line())
     "help" | "--help" | "-h" => print_usage()
     other => {
@@ -66,16 +67,72 @@ fn cmd_inspect(args : Array[String]) -> Unit {
 }
 
 ///|
+/// survey 命令：moonhive survey [--out 报告路径] <候选>...
+///
+/// 候选可以是 owner/repo、HTTPS URL 或本地目录。
+/// 与 inspect 的区别：survey 会汇总并写出可归档的报告。
+fn cmd_survey(args : Array[String]) -> Unit {
+  if args.length() == 0 {
+    println("用法: moonhive survey [--out <报告路径>] <候选>...")
+    println("")
+    println("候选可以是 owner/repo、https://github.com/owner/repo 或本地目录")
+    println("示例: moonhive survey --out report.md moonbit-community/yaml ./my-pkg")
+    @proc.exit_with(14)
+    return
+  }
+  // 解析参数
+  let mut out_path = ""
+  let candidates : Array[@gitsource.Candidate] = []
+  let mut i = 0
+  let bad : Array[String] = []
+  while i < args.length() {
+    let a = args[i]
+    if a == "--out" && i + 1 < args.length() {
+      out_path = args[i + 1]
+      i = i + 2
+    } else if a.has_prefix("--out=") {
+      out_path = a.substring(start=6, end=a.length())
+      i = i + 1
+    } else {
+      match @inspect.resolve_candidate(a) {
+        Ok(c) => candidates.push(c)
+        Err(msg) => bad.push(a + "（" + msg + "）")
+      }
+      i = i + 1
+    }
+  }
+  for b in bad {
+    println("跳过: " + b)
+  }
+  if candidates.length() == 0 {
+    println("没有可验证的候选。")
+    @proc.exit_with(14)
+    return
+  }
+  let opt : @survey.SurveyOptions = {
+    target: "native",
+    timeout_ms: 120000,
+    with_test: true,
+    out_path,
+  }
+  let (_report, code) = @survey.run(candidates, opt)
+  @proc.exit_with(code)
+}
+
+///|
 fn print_usage() -> Unit {
   println(version_line())
   println("")
   println("用法: moonhive <命令> [参数...]")
   println("")
   println("命令:")
-  println("  inspect <owner/repo>...  体检指定仓库：拉下来用真实工具链验证能否编译与测试")
-  println("  doctor                   检查运行环境（工具链 / git / TLS / 临时目录）")
-  println("  version                  打印版本")
-  println("  help                     打印本帮助")
+  println("  survey [--out <路径>] <候选>...  批量普查并生成报告")
+  println("  inspect <候选>...               体检指定仓库：拉下来用真实工具链验证")
+  println("  doctor                          检查运行环境（工具链 / git / TLS / 临时目录）")
+  println("  version                         打印版本")
+  println("  help                            打印本帮助")
+  println("")
+  println("候选写法: owner/repo | https://github.com/owner/repo | 本地目录路径")
   println("")
   println("结论说明:")
   println("  ✅ Verified            编译与测试通过，可以直接使用")

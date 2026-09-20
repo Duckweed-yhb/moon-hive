@@ -80,109 +80,7 @@ static void mbt_str_to_ascii(moonbit_string_t src, char *dst, int32_t cap) {
   dst[n] = 0;
 }
 
-/* ASCII C 串 → MoonBit String。保留原始字节，不做换行替换。
-   （仅用于确定是 ASCII 的场景，例如版本号） */
-static moonbit_string_t ascii_to_mbt_str(const char *src, int32_t len) {
-  if (len < 0) {
-    len = 0;
-  }
-  moonbit_string_t out = moonbit_make_string(len, 0);
-  for (int32_t i = 0; i < len; i++) {
-    out[i] = (uint16_t)(unsigned char)src[i];
-  }
-  return out;
-}
-
-/* ---------- UTF-8 → UTF-16 ----------
- *
- * 为什么需要它：MoonBit 的 String 是 UTF-16。若把文件的原始字节
- * 逐字节当作 UTF-16 码元，任何多字节字符都会变成乱码
- * （实测：编译器输出里的框线字符变成 âââ）。
- *
- * 这里做一次正规的 UTF-8 解码，并处理以下情况：
- *   - 合法的 1/2/3/4 字节序列 → 对应的 UTF-16 码元（含代理对）
- *   - 非法序列、截断序列、BOM(EF BB BF) → 跳过或替换，绝不产生乱码
- */
-static int32_t utf8_to_utf16(const unsigned char *src, int32_t len,
-                             uint16_t *out, int32_t out_cap) {
-  int32_t n = 0;
-  int32_t i = 0;
-  /* 跳过 UTF-8 BOM */
-  if (len >= 3 && src[0] == 0xEF && src[1] == 0xBB && src[2] == 0xBF) {
-    i = 3;
-  }
-  while (i < len) {
-    unsigned char c = src[i];
-    uint32_t cp = 0;
-    int32_t extra = 0;
-
-    if (c < 0x80) {
-      cp = c;
-      extra = 0;
-    } else if ((c & 0xE0) == 0xC0) {
-      cp = c & 0x1F;
-      extra = 1;
-    } else if ((c & 0xF0) == 0xE0) {
-      cp = c & 0x0F;
-      extra = 2;
-    } else if ((c & 0xF8) == 0xF0) {
-      cp = c & 0x07;
-      extra = 3;
-    } else {
-      /* 非法起始字节 */
-      if (n < out_cap) {
-        out[n++] = (uint16_t)'?';
-      }
-      i++;
-      continue;
-    }
-
-    if (i + extra >= len) {
-      /* 截断序列 */
-      if (n < out_cap) {
-        out[n++] = (uint16_t)'?';
-      }
-      i = len;
-      break;
-    }
-    int32_t ok = 1;
-    for (int32_t k = 1; k <= extra; k++) {
-      unsigned char cc = src[i + k];
-      if ((cc & 0xC0) != 0x80) {
-        ok = 0;
-        break;
-      }
-      cp = (cp << 6) | (uint32_t)(cc & 0x3F);
-    }
-    if (!ok) {
-      if (n < out_cap) {
-        out[n++] = (uint16_t)'?';
-      }
-      i++;
-      continue;
-    }
-    i += extra + 1;
-
-    /* 编码为 UTF-16 */
-    if (cp < 0x10000) {
-      if (n < out_cap) {
-        out[n++] = (uint16_t)cp;
-      }
-    } else if (cp <= 0x10FFFF) {
-      cp -= 0x10000;
-      if (n + 1 < out_cap) {
-        out[n++] = (uint16_t)(0xD800 | (cp >> 10));
-        out[n++] = (uint16_t)(0xDC00 | (cp & 0x3FF));
-      }
-    } else {
-      if (n < out_cap) {
-        out[n++] = (uint16_t)'?';
-      }
-    }
-  }
-  return n;
-}
-
+/* 生成一个临时文件名（含进程号，避免并发冲突） */
 static const char *temp_name(const char *suffix, char *buf, int32_t cap) {
 #ifdef _WIN32
   const char *base = getenv("TEMP");
@@ -344,9 +242,17 @@ int32_t proc_run_capture(moonbit_string_t cmd, moonbit_string_t workdir,
   return rc;
 }
 
-/* ---------- 读取文本文件（供调用方回读捕获结果） ---------- */
+/* ---------- 进程捕获文件的读回 ---------- */
 
-moonbit_string_t fs_read_text(moonbit_string_t path) {
+/* 读取文本文件并按 UTF-8 解码。
+ *
+ * 为什么符号名带 proc_ 前缀：platform/fs 也提供文本读取，两个包最终
+ * 链接进同一个可执行文件，同名符号会导致 multiple definition（实测踩过）。
+ *
+ * 为什么要做 UTF-8 解码：MoonBit 的 String 是 UTF-16。若把文件字节
+ * 逐字节当作 UTF-16 码元，多字节字符会变成乱码（实测：编译器输出里的
+ * 框线字符变成 âââ）。 */
+moonbit_string_t proc_read_file(moonbit_string_t path) {
   char p[1024];
   mbt_str_to_ascii(path, p, (int32_t)sizeof(p));
   FILE *f = fopen(p, "rb");
@@ -359,8 +265,8 @@ moonbit_string_t fs_read_text(moonbit_string_t path) {
     fclose(f);
     return moonbit_make_string(0, 0);
   }
-  int chunk;
-  while ((chunk = (int)fread(buf + len, 1, (size_t)(cap - len - 1), f)) > 0) {
+  int32_t chunk;
+  while ((chunk = (int32_t)fread(buf + len, 1, (size_t)(cap - len - 1), f)) > 0) {
     len += chunk;
     if (len + 1 >= cap) {
       cap *= 2;
@@ -372,19 +278,81 @@ moonbit_string_t fs_read_text(moonbit_string_t path) {
     }
   }
   fclose(f);
-  /* 按 UTF-8 解码，避免多字节字符（中文、框线符号）变成乱码 */
+
   uint16_t *u16 = (uint16_t *)malloc(sizeof(uint16_t) * ((size_t)len + 1));
-  int32_t un = 0;
+  int32_t n = 0;
   if (u16 != NULL) {
-    un = utf8_to_utf16((const unsigned char *)buf, len, u16, len + 1);
+    int32_t i = 0;
+    if (len >= 3 && (unsigned char)buf[0] == 0xEF && (unsigned char)buf[1] == 0xBB &&
+        (unsigned char)buf[2] == 0xBF) {
+      i = 3;
+    }
+    while (i < len) {
+      unsigned char c = (unsigned char)buf[i];
+      uint32_t cp = 0;
+      int32_t extra = 0;
+      if (c < 0x80) {
+        cp = c;
+      } else if ((c & 0xE0) == 0xC0) {
+        cp = c & 0x1F;
+        extra = 1;
+      } else if ((c & 0xF0) == 0xE0) {
+        cp = c & 0x0F;
+        extra = 2;
+      } else if ((c & 0xF8) == 0xF0) {
+        cp = c & 0x07;
+        extra = 3;
+      } else {
+        u16[n++] = (uint16_t)'?';
+        i++;
+        continue;
+      }
+      if (i + extra >= len) {
+        u16[n++] = (uint16_t)'?';
+        break;
+      }
+      int32_t ok = 1;
+      for (int32_t k = 1; k <= extra; k++) {
+        if (((unsigned char)buf[i + k] & 0xC0) != 0x80) {
+          ok = 0;
+          break;
+        }
+        cp = (cp << 6) | (uint32_t)((unsigned char)buf[i + k] & 0x3F);
+      }
+      if (!ok) {
+        u16[n++] = (uint16_t)'?';
+        i++;
+        continue;
+      }
+      i += extra + 1;
+      if (cp < 0x10000) {
+        u16[n++] = (uint16_t)cp;
+      } else if (cp <= 0x10FFFF) {
+        cp -= 0x10000;
+        u16[n++] = (uint16_t)(0xD800 | (cp >> 10));
+        u16[n++] = (uint16_t)(0xDC00 | (cp & 0x3FF));
+      } else {
+        u16[n++] = (uint16_t)'?';
+      }
+    }
   }
-  moonbit_string_t out = moonbit_make_string(un, 0);
-  for (int32_t i = 0; i < un; i++) {
-    out[i] = u16[i];
+  moonbit_string_t out = moonbit_make_string(n, 0);
+  for (int32_t k = 0; k < n; k++) {
+    out[k] = u16[k];
   }
   free(u16);
   free(buf);
   return out;
+}
+
+/* 删除文件；成功返回 0。符号名带 proc_ 前缀同样为避免与 fs 冲突。 */
+int32_t proc_remove_file(moonbit_string_t path) {
+  char p[1024];
+  mbt_str_to_ascii(path, p, (int32_t)sizeof(p));
+  if (p[0] == 0) {
+    return -1;
+  }
+  return (remove(p) == 0) ? 0 : -1;
 }
 
 /* ---------- 诊断接口 ---------- */
@@ -392,16 +360,6 @@ moonbit_string_t fs_read_text(moonbit_string_t path) {
 int32_t proc_last_error(void) { return g_last_error; }
 
 uint64_t proc_last_elapsed_ms(void) { return g_last_elapsed_ms; }
-
-/* 删除文件；成功返回 0，失败返回 -1。用于清理捕获输出的临时文件。 */
-int32_t fs_remove(moonbit_string_t path) {
-  char p[1024];
-  mbt_str_to_ascii(path, p, (int32_t)sizeof(p));
-  if (p[0] == 0) {
-    return -1;
-  }
-  return (UNLINK(p) == 0) ? 0 : -1;
-}
 
 /* 以指定退出码终止进程。CLI 需要它把错误契约映射成 shell 可见的退出码。
    声明为返回 int32_t 以便 MoonBit 侧声明为 -> Unit 之外的用法；

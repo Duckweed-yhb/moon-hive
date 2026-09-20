@@ -1,0 +1,12 @@
+///|
+/// features/survey — 批量普查与报告生成
+import {
+  "Duckweed/moon-hive/platform/fs" @fs,
+  "Duckweed/moon-hive/platform/proc" @proc,
+  "Duckweed/moon-hive/platform/time" @time,
+  "Duckweed/moon-hive/verify/check" @check,
+  "Duckweed/moon-hive/verify/diagnose" @diagnose,
+  "Duckweed/moon-hive/verify/gitsource" @gitsource,
+  "Duckweed/moon-hive/verify/workspace" @workspace,
+  "moonbitlang/core/env" @env,
+}

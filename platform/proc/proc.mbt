@@ -43,11 +43,12 @@ extern "C" fn proc_run_capture(
   timeout_ms : Int
 ) -> Int = "proc_run_capture"
 
-#borrow(path)
-extern "C" fn fs_read_text_raw(path : String) -> String = "fs_read_text"
 
 #borrow(path)
-extern "C" fn fs_remove_raw(path : String) -> Int = "fs_remove"
+extern "C" fn proc_read_file_raw(path : String) -> String = "proc_read_file"
+
+#borrow(path)
+extern "C" fn proc_remove_file_raw(path : String) -> Int = "proc_remove_file"
 
 extern "C" fn proc_last_elapsed_ms_raw() -> UInt64 = "proc_last_elapsed_ms"
 
@@ -157,10 +158,10 @@ pub fn run(cmd : String, workdir : String, timeout_ms : Int) -> Result[Output, P
   let out_file = join_path(tmp, prefix + "-out.txt")
   let err_file = join_path(tmp, prefix + "-err.txt")
   let code = proc_run_capture(cmd, workdir, out_file, err_file, timeout_ms)
-  let stdout = fs_read_text_raw(out_file)
-  let stderr = fs_read_text_raw(err_file)
-  ignore(fs_remove_raw(out_file))
-  ignore(fs_remove_raw(err_file))
+  let stdout = proc_read_file_raw(out_file)
+  let stderr = proc_read_file_raw(err_file)
+  ignore(proc_remove_file_raw(out_file))
+  ignore(proc_remove_file_raw(err_file))
   match map_error_code(code) {
     Some(err) => Err(err)
     None =>
@@ -182,17 +183,6 @@ pub fn run_ok(cmd : String, workdir : String, timeout_ms : Int) -> Bool {
   }
 }
 
-///|
-/// 读取文本文件内容。文件不存在或不可读时返回空串。
-pub fn read_text(path : String) -> String {
-  fs_read_text_raw(path)
-}
-
-///|
-/// 删除文件。返回是否成功。
-pub fn remove_file(path : String) -> Bool {
-  fs_remove_raw(path) == 0
-}
 
 ///|
 /// 以指定退出码终止进程。CLI 用它把错误契约映射成 shell 可见的退出码。

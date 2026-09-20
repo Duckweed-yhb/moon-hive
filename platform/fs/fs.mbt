@@ -162,6 +162,36 @@ pub fn copy_file(src : String, dst : String) -> Bool {
   fs_copy_file_ffi(src, dst) == 0
 }
 
+// ---------- 文本读写 ----------
+
+#borrow(path)
+extern "C" fn fs_read_text_ffi(path : String) -> String = "fs_read_text"
+
+#borrow(path, content)
+extern "C" fn fs_write_text_ffi(path : String, content : String) -> Int = "fs_write_text"
+
+///|
+/// 读取文本文件（按 UTF-8 解码）。
+/// 文件不存在或不可读时返回空串。
+pub fn read_text(path : String) -> String {
+  fs_read_text_ffi(path)
+}
+
+///|
+/// 写文本文件（覆盖写，UTF-8 编码）。成功返回 true。
+pub fn write_text(path : String, content : String) -> Bool {
+  fs_write_text_ffi(path, content) == 0
+}
+
+#borrow(path)
+extern "C" fn fs_remove_ffi(path : String) -> Int = "fs_remove"
+
+///|
+/// 删除文件。返回是否成功。
+pub fn remove_file(path : String) -> Bool {
+  fs_remove_ffi(path) == 0
+}
+
 // ---------- 单元测试 ----------
 // 这些测试会真实读写临时目录。每个用例使用独立目录，避免相互干扰。
 

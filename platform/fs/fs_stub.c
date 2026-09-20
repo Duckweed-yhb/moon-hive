@@ -263,6 +263,167 @@ int32_t fs_rm_rf(moonbit_string_t path) {
 
 /* ---------- 文件读写 ---------- */
 
+/* 把 UTF-8 字节解码为 UTF-16 并构造 MoonBit 字符串。
+   MoonBit 的 String 是 UTF-16，逐字节转换会让多字节字符变乱码。 */
+static moonbit_string_t utf8_bytes_to_mbt_str(const char *src, int32_t len) {
+  if (len < 0) {
+    len = 0;
+  }
+  uint16_t *u16 = (uint16_t *)malloc(sizeof(uint16_t) * ((size_t)len + 1));
+  if (u16 == NULL) {
+    return moonbit_make_string(0, 0);
+  }
+  int32_t n = 0;
+  int32_t i = 0;
+  if (len >= 3 && (unsigned char)src[0] == 0xEF && (unsigned char)src[1] == 0xBB &&
+      (unsigned char)src[2] == 0xBF) {
+    i = 3;
+  }
+  while (i < len) {
+    unsigned char c = (unsigned char)src[i];
+    uint32_t cp = 0;
+    int32_t extra = 0;
+    if (c < 0x80) {
+      cp = c;
+      extra = 0;
+    } else if ((c & 0xE0) == 0xC0) {
+      cp = c & 0x1F;
+      extra = 1;
+    } else if ((c & 0xF0) == 0xE0) {
+      cp = c & 0x0F;
+      extra = 2;
+    } else if ((c & 0xF8) == 0xF0) {
+      cp = c & 0x07;
+      extra = 3;
+    } else {
+      u16[n++] = (uint16_t)'?';
+      i++;
+      continue;
+    }
+    if (i + extra >= len) {
+      u16[n++] = (uint16_t)'?';
+      break;
+    }
+    int32_t ok = 1;
+    for (int32_t k = 1; k <= extra; k++) {
+      if (((unsigned char)src[i + k] & 0xC0) != 0x80) {
+        ok = 0;
+        break;
+      }
+      cp = (cp << 6) | (uint32_t)((unsigned char)src[i + k] & 0x3F);
+    }
+    if (!ok) {
+      u16[n++] = (uint16_t)'?';
+      i++;
+      continue;
+    }
+    i += extra + 1;
+    if (cp < 0x10000) {
+      u16[n++] = (uint16_t)cp;
+    } else if (cp <= 0x10FFFF) {
+      cp -= 0x10000;
+      u16[n++] = (uint16_t)(0xD800 | (cp >> 10));
+      u16[n++] = (uint16_t)(0xDC00 | (cp & 0x3FF));
+    } else {
+      u16[n++] = (uint16_t)'?';
+    }
+  }
+  moonbit_string_t out = moonbit_make_string(n, 0);
+  for (int32_t k = 0; k < n; k++) {
+    out[k] = u16[k];
+  }
+  free(u16);
+  return out;
+}
+
+/* 读取文本文件（按 UTF-8 解码）。不存在或不可读返回空串。 */
+moonbit_string_t fs_read_text(moonbit_string_t path) {
+  char p[FS_MAX_PATH];
+  fs_str_to_ascii(path, p, (int32_t)sizeof(p));
+  FILE *f = fopen(p, "rb");
+  if (f == NULL) {
+    return moonbit_make_string(0, 0);
+  }
+  int32_t cap = 8192, len = 0;
+  char *buf = (char *)malloc((size_t)cap);
+  if (buf == NULL) {
+    fclose(f);
+    return moonbit_make_string(0, 0);
+  }
+  int32_t chunk;
+  while ((chunk = (int32_t)fread(buf + len, 1, (size_t)(cap - len - 1), f)) > 0) {
+    len += chunk;
+    if (len + 1 >= cap) {
+      cap *= 2;
+      char *nb = (char *)realloc(buf, (size_t)cap);
+      if (nb == NULL) {
+        break;
+      }
+      buf = nb;
+    }
+  }
+  fclose(f);
+  moonbit_string_t out = utf8_bytes_to_mbt_str(buf, len);
+  free(buf);
+  return out;
+}
+
+/* 把 MoonBit 字符串按 UTF-8 编码写入文件（覆盖写）。成功返回 0。 */
+int32_t fs_write_text(moonbit_string_t path, moonbit_string_t content) {
+  char p[FS_MAX_PATH];
+  fs_str_to_ascii(path, p, (int32_t)sizeof(p));
+  FILE *f = fopen(p, "wb");
+  if (f == NULL) {
+    return -1;
+  }
+  int32_t n = Moonbit_array_length(content);
+  for (int32_t i = 0; i < n; i++) {
+    uint32_t cp = (uint32_t)content[i];
+    /* 处理 UTF-16 代理对 */
+    if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < n) {
+      uint32_t lo = (uint32_t)content[i + 1];
+      if (lo >= 0xDC00 && lo <= 0xDFFF) {
+        cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
+        i++;
+      }
+    }
+    unsigned char b[4];
+    int32_t len = 0;
+    if (cp < 0x80) {
+      b[0] = (unsigned char)cp;
+      len = 1;
+    } else if (cp < 0x800) {
+      b[0] = (unsigned char)(0xC0 | (cp >> 6));
+      b[1] = (unsigned char)(0x80 | (cp & 0x3F));
+      len = 2;
+    } else if (cp < 0x10000) {
+      b[0] = (unsigned char)(0xE0 | (cp >> 12));
+      b[1] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
+      b[2] = (unsigned char)(0x80 | (cp & 0x3F));
+      len = 3;
+    } else {
+      b[0] = (unsigned char)(0xF0 | (cp >> 18));
+      b[1] = (unsigned char)(0x80 | ((cp >> 12) & 0x3F));
+      b[2] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
+      b[3] = (unsigned char)(0x80 | (cp & 0x3F));
+      len = 4;
+    }
+    fwrite(b, 1, (size_t)len, f);
+  }
+  fclose(f);
+  return 0;
+}
+
+/* 删除文件；成功返回 0，失败返回 -1。 */
+int32_t fs_remove(moonbit_string_t path) {
+  char p[FS_MAX_PATH];
+  fs_str_to_ascii(path, p, (int32_t)sizeof(p));
+  if (p[0] == 0) {
+    return -1;
+  }
+  return (remove(p) == 0) ? 0 : -1;
+}
+
 /* 复制单个文件；成功返回 0 */
 int32_t fs_copy_file(moonbit_string_t src, moonbit_string_t dst) {
   char sp[FS_MAX_PATH];

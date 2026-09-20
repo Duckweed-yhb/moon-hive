@@ -140,8 +140,8 @@ fn check_temp_dir() -> Check {
   if code != 0 {
     return { name: "临时目录", status: Fail, detail: dir + " 不可写（验证工作区无法创建）" }
   }
-  let existed = @proc.read_text(probe_file).length() > 0
-  let removed = @proc.remove_file(probe_file)
+  let existed = @fs.read_text(probe_file).length() > 0
+  let removed = @fs.remove_file(probe_file)
   if !existed {
     return { name: "临时目录", status: Warn, detail: dir + " 可写但回读失败" }
   }

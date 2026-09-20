@@ -53,7 +53,7 @@ fn unsafe_markers() -> Array[String] {
 /// 扫描 moon.pkg 文件，判断是否含自定义构建配置
 fn detect_unsafe(dir : String) -> Bool {
   for pkg in @fs.list_files(dir, ".pkg", 6) {
-    let content = @proc.read_text(pkg)
+    let content = @fs.read_text(pkg)
     if content.length() == 0 {
       continue
     }
@@ -83,7 +83,7 @@ fn detect_declared_targets(dir : String) -> Array[String] {
     }
   }
   for f in files {
-    let content = @proc.read_text(f)
+    let content = @fs.read_text(f)
     if content.length() == 0 {
       continue
     }
@@ -114,7 +114,7 @@ fn measure_repo(dir : String) -> (Int, Int, Int, Int64) {
   let mut lines = 0
   let mut tests = 0
   for f in mbt {
-    let content = @proc.read_text(f)
+    let content = @fs.read_text(f)
     for _ in content.split("\n") {
       lines = lines + 1
     }
