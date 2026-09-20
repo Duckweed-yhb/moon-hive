@@ -67,31 +67,46 @@ fn cmd_inspect(args : Array[String]) -> Unit {
 }
 
 ///|
-/// survey 命令：moonhive survey [--out 报告路径] <候选>...
+/// survey 命令：moonhive survey [--out md] [--json f] [--site f] <候选>...
 ///
 /// 候选可以是 owner/repo、HTTPS URL 或本地目录。
-/// 与 inspect 的区别：survey 会汇总并写出可归档的报告。
+/// 三种报告格式可同时输出，共用同一份数据模型。
 fn cmd_survey(args : Array[String]) -> Unit {
   if args.length() == 0 {
-    println("用法: moonhive survey [--out <报告路径>] <候选>...")
+    println("用法: moonhive survey [--out <md>] [--json <json>] [--site <html>] <候选>...")
     println("")
     println("候选可以是 owner/repo、https://github.com/owner/repo 或本地目录")
-    println("示例: moonhive survey --out report.md moonbit-community/yaml ./my-pkg")
+    println(
+      "示例: moonhive survey --out report.md --json report.json --site index.html moonbit-community/yaml",
+    )
     @proc.exit_with(14)
     return
   }
-  // 解析参数
-  let mut out_path = ""
+  let mut md_path = ""
+  let mut json_path = ""
+  let mut site_path = ""
   let candidates : Array[@gitsource.Candidate] = []
   let mut i = 0
   let bad : Array[String] = []
   while i < args.length() {
     let a = args[i]
-    if a == "--out" && i + 1 < args.length() {
-      out_path = args[i + 1]
+    if (a == "--out" || a == "--md") && i + 1 < args.length() {
+      md_path = args[i + 1]
+      i = i + 2
+    } else if a == "--json" && i + 1 < args.length() {
+      json_path = args[i + 1]
+      i = i + 2
+    } else if a == "--site" && i + 1 < args.length() {
+      site_path = args[i + 1]
       i = i + 2
     } else if a.has_prefix("--out=") {
-      out_path = a.substring(start=6, end=a.length())
+      md_path = a.substring(start=6, end=a.length())
+      i = i + 1
+    } else if a.has_prefix("--json=") {
+      json_path = a.substring(start=7, end=a.length())
+      i = i + 1
+    } else if a.has_prefix("--site=") {
+      site_path = a.substring(start=7, end=a.length())
       i = i + 1
     } else {
       match @inspect.resolve_candidate(a) {
@@ -113,7 +128,9 @@ fn cmd_survey(args : Array[String]) -> Unit {
     target: "native",
     timeout_ms: 120000,
     with_test: true,
-    out_path,
+    md_path,
+    json_path,
+    site_path,
   }
   let (_report, code) = @survey.run(candidates, opt)
   @proc.exit_with(code)
@@ -126,7 +143,8 @@ fn print_usage() -> Unit {
   println("用法: moonhive <命令> [参数...]")
   println("")
   println("命令:")
-  println("  survey [--out <路径>] <候选>...  批量普查并生成报告")
+  println("  survey [--out md] [--json f] [--site f] <候选>...")
+  println("                                  批量普查并生成三种格式的报告")
   println("  inspect <候选>...               体检指定仓库：拉下来用真实工具链验证")
   println("  doctor                          检查运行环境（工具链 / git / TLS / 临时目录）")
   println("  version                         打印版本")

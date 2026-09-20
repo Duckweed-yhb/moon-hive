@@ -1,0 +1,6 @@
+///|
+/// report/site — 公开静态站生成（单文件 HTML，零依赖）
+import {
+  "Duckweed/moon-hive/platform/time" @time,
+  "Duckweed/moon-hive/report/model" @model,
+}

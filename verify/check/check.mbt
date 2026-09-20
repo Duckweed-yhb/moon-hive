@@ -12,7 +12,7 @@
 
 ///|
 /// 单个候选包的验证结果
-pub struct RevResult {
+pub(all) struct RevResult {
   /// 仓库标识 owner/repo
   slug : String
   /// 最终结论

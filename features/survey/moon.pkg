@@ -1,9 +1,12 @@
 ///|
-/// features/survey — 批量普查与报告生成
+/// features/survey — 批量普查与多格式报告生成
 import {
   "Duckweed/moon-hive/platform/fs" @fs,
   "Duckweed/moon-hive/platform/proc" @proc,
   "Duckweed/moon-hive/platform/time" @time,
+  "Duckweed/moon-hive/report/json" @json,
+  "Duckweed/moon-hive/report/model" @model,
+  "Duckweed/moon-hive/report/site" @site,
   "Duckweed/moon-hive/verify/check" @check,
   "Duckweed/moon-hive/verify/diagnose" @diagnose,
   "Duckweed/moon-hive/verify/gitsource" @gitsource,

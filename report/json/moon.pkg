@@ -1,0 +1,5 @@
+///|
+/// report/json — 机器可读输出
+import {
+  "Duckweed/moon-hive/report/model" @model,
+}
