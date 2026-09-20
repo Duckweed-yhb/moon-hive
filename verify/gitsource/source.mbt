@@ -95,9 +95,38 @@ pub fn is_local(c : Candidate) -> Bool {
 }
 
 ///|
-/// 宽松规范化：去掉首尾空白、去掉末尾的 ".git"、去掉首尾斜杠
+/// 判断一个 UTF-16 码元是否为需要从两端剥掉的空白或斜杠。
+/// 注意 `String::unsafe_get` 返回的是 UInt16 码元而非 Char。
+fn is_trim_unit(c : UInt16) -> Bool {
+  c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D || c == 0x2F || c == 0x5C
+}
+
+///|
+/// 剥掉字符串两端的所有空白与斜杠。
+///
+/// 为什么要连斜杠一起剥：调用方可能传入
+/// `"  https://github.com/a/b.git/  "` 这种形态，
+/// 若只 `trim()` 空白，末尾的 `/` 会残留，`.git` 判断就会失配
+/// （测试曾因此得到 "a/b.git"）。因此统一在第一轮就剥干净。
+fn strip_edges(s : String) -> String {
+  let mut start = 0
+  let mut end = s.length()
+  while start < end && is_trim_unit(s.unsafe_get(start)) {
+    start = start + 1
+  }
+  while end > start && is_trim_unit(s.unsafe_get(end - 1)) {
+    end = end - 1
+  }
+  s.substring(start=start, end=end)
+}
+
+///|
+/// 宽松规范化：剥掉首尾空白与斜杠、去掉协议/域名前缀、去掉末尾的 ".git"。
+///
+/// 顺序很关键：必须**先剥干净两端**，再判断 `.git` 后缀，
+/// 否则末尾的空格或斜杠会让后缀判断失配。
 pub fn normalize_slug(raw : String) -> String {
-  let mut s = raw.trim().to_owned()
+  let mut s = strip_edges(raw)
   // 去掉可能的协议前缀与域名前缀
   if s.has_prefix("https://github.com/") {
     s = s.substring(start=19, end=s.length())
@@ -106,20 +135,17 @@ pub fn normalize_slug(raw : String) -> String {
   } else if s.has_prefix("github.com/") {
     s = s.substring(start=11, end=s.length())
   }
-  if s.has_suffix(".git") {
+  // 去掉末尾的 ".git"（此时末尾已无空白与斜杠）
+  if s.length() > 4 && s.has_suffix(".git") {
     s = s.substring(start=0, end=s.length() - 4)
   }
-  while s.length() > 0 && s.unsafe_get(s.length() - 1) == '/' {
-    s = s.substring(start=0, end=s.length() - 1)
-  }
-  while s.length() > 0 && s.unsafe_get(0) == '/' {
-    s = s.substring(start=1, end=s.length())
-  }
-  s
+  // 协议剥离后可能又露出前后斜杠，再剥一次
+  strip_edges(s)
 }
 
 ///|
-/// 判断 slug 是否形如 owner/repo 且两侧都非空、不含多余斜杠
+/// 判断 slug 是否形如 owner/repo：
+/// 恰好一个斜杠、两侧都非空、且任何位置都不含空白。
 pub fn is_valid_slug(slug : String) -> Bool {
   if slug.length() == 0 {
     return false
@@ -127,7 +153,12 @@ pub fn is_valid_slug(slug : String) -> Bool {
   let mut slashes = 0
   let mut idx = -1
   for i = 0; i < slug.length(); i = i + 1 {
-    if slug.unsafe_get(i) == '/' {
+    let c = slug.unsafe_get(i)
+    // 含空白一律非法：`a /b` 这种输入不应被当作合法仓库标识
+    if c == ' ' || c == '\t' || c == '\n' || c == '\r' {
+      return false
+    }
+    if c == '/' {
       slashes = slashes + 1
       idx = i
     }
@@ -256,6 +287,79 @@ test "with_ref 保留其余字段" {
   assert_eq(c2.url, "https://github.com/a/b.git")
 }
 
+test "looks_like_local_path 识别本地路径形态" {
+  assert_true(looks_like_local_path("./pkg"))
+  assert_true(looks_like_local_path("../pkg"))
+  assert_true(looks_like_local_path("/usr/lib/pkg"))
+  assert_true(looks_like_local_path("C:\\proj\\pkg"))
+  assert_false(looks_like_local_path("moonbitlang/x"))
+  assert_false(looks_like_local_path(""))
+}
+
+test "basename 取路径最后一段（经 from_local 间接验证）" {
+  let tmp = @proc.temp_dir()
+  match from_local(tmp) {
+    Ok(c) => {
+      assert_true(c.slug.length() > 0)
+      assert_false(c.slug.contains("\\"))
+      assert_false(c.slug.contains("/"))
+    }
+    Err(_) => fail("临时目录应可作为本地候选")
+  }
+}
+
+test "from_local 拒绝不存在的路径" {
+  let missing = @proc.join_path(@proc.temp_dir(), "moonhive-definitely-missing-xyz")
+  assert_true(match from_local(missing) {
+    Err(BadLocalPath(_)) => true
+    _ => false
+  })
+}
+
+test "is_local 区分本地与远端候选" {
+  let remote = match from_slug("a/b") {
+    Ok(c) => c
+    Err(_) => fail("应解析成功")
+  }
+  assert_false(is_local(remote))
+  match from_local(@proc.temp_dir()) {
+    Ok(c) => assert_true(is_local(c))
+    Err(_) => fail("临时目录应可作为本地候选")
+  }
+}
+
+test "远端候选的 local_path 为空（不会被误当成本地目录）" {
+  match from_slug("owner/repo") {
+    Ok(c) => {
+      assert_eq(c.local_path, "")
+      assert_false(is_local(c))
+    }
+    Err(_) => fail("应解析成功")
+  }
+}
+
+test "normalize_slug 处理多层斜杠与空格混合" {
+  assert_eq(normalize_slug("  https://github.com/a/b.git/  "), "a/b")
+  assert_eq(normalize_slug("github.com/a/b"), "a/b")
+  assert_eq(normalize_slug("///a/b///"), "a/b")
+}
+
+test "is_valid_slug 拒绝含空白的形态" {
+  assert_false(is_valid_slug("a /b"))
+  assert_false(is_valid_slug(" / "))
+  assert_true(is_valid_slug("a/b"))
+}
+
+test "with_ref 不改变 local_path 语义" {
+  match from_slug("a/b") {
+    Ok(c) => {
+      let c2 = with_ref(c, "v1")
+      assert_eq(c2.git_ref, "v1")
+      assert_false(is_local(c2))
+    }
+    Err(_) => fail("应解析成功")
+  }
+}
 test "to_dir_name 去掉路径分隔符" {
   assert_eq(to_dir_name("moonbitlang/x"), "moonbitlang__x")
   assert_eq(to_dir_name("plain"), "plain")
