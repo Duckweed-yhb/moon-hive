@@ -1,0 +1,6 @@
+///|
+/// verify/gitsource — 候选仓库发现与克隆
+import {
+  "Duckweed/moon-hive/platform/fs" @fs,
+  "Duckweed/moon-hive/platform/proc" @proc,
+}

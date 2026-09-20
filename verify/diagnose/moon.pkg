@@ -1,0 +1,3 @@
+///|
+/// verify/diagnose — 诊断分类（纯计算，可离线单测）
+import {}
