@@ -8,7 +8,13 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    name: build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,8 +22,16 @@ jobs:
       - name: Setup MoonBit
         uses: hustcer/setup-moonbit@v1
 
-      - name: Build
-        run: moon build
+      # 本项目依赖 C FFI（进程执行 / 文件系统），只在 native 后端可用。
+      # wasm 后端无法构建，这是架构上的有意选择，详见 docs/ARCHITECTURE.md。
+      - name: Build (native)
+        run: moon build --target native
 
-      - name: Test
-        run: moon test
+      - name: Test (native)
+        run: moon test --target native
+
+      - name: CLI smoke test - doctor
+        run: moon run cmd/moonhive --target native -- doctor
+
+      - name: CLI smoke test - version
+        run: moon run cmd/moonhive --target native -- version

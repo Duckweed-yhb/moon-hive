@@ -1,7 +1,0 @@
-import {
-  "moonbitlang/core/encoding/utf8" @utf8,
-  "moonbitlang/core/env" @env,
-  "moonbitlang/core/json" @json,
-  "moonbitlang/core/math" @math,
-  "moonbitlang/core/string" @string,
-}

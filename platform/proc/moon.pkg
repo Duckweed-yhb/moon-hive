@@ -1,0 +1,11 @@
+///|
+/// platform/proc — 原生后端进程与文件子系统
+///
+/// 只有本包（与 platform/fs）允许出现 C FFI。
+options(
+  "native-stub": ["proc_stub.c"],
+)
+
+import {
+  "moonbitlang/core/env" @env,
+}

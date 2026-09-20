@@ -1,0 +1,5 @@
+///|
+/// features/doctor — 环境自检
+import {
+  "Duckweed/moon-hive/platform/proc" @proc,
+}

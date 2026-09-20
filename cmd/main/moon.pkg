@@ -1,5 +1,0 @@
-import {
-  "Duckweed/moon-hive/lib" @lib,
-  "moonbitlang/core/env",
-}
-pkgtype(kind: "executable")
