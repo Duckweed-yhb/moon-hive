@@ -52,8 +52,25 @@ MoonHive 的价值就在于把这个结果**正确归类**：这不是"这个包
 | `verify/check` — 工具链驱动与验证编排 | ✅ 已完成 |
 | `features/doctor` — 环境自检 | ✅ 已完成 |
 | `features/inspect` — 单包深度体检 | ✅ 已完成 |
-| `features/survey` — 批量普查主命令 | 🚧 开发中 |
-| `report/*` — 报告与公开静态站 | 🚧 开发中 |
+| `features/survey` — 批量普查主命令 | ✅ 已完成 |
+| `report/model` — 报告数据模型 | ✅ 已完成 |
+| `report/json` — 机器可读输出 | ✅ 已完成 |
+| `report/site` — 公开静态站（单文件 HTML） | ✅ 已完成 |
+
+**测试：115 个用例全绿。构建 0 警告。**
+
+### 三种报告格式
+
+`survey` 可同时产出三种格式，共用同一份数据模型：
+
+| 格式 | 参数 | 用途 |
+|---|---|---|
+| Markdown | `--out report.md` | 给人读、可贴进仓库 |
+| JSON | `--json report.json` | 给脚本读、可做趋势对比（含 `schemaVersion`） |
+| HTML | `--site index.html` | 单文件、内联样式、零 JavaScript，可直接托管为公开静态站 |
+
+三种格式的头部都强制记录**验证环境**（工具链版本 / 目标后端 / 时间戳）——
+脱离环境的"能不能用"是没有意义的结论。
 
 ### 已验证的真实效果
 
@@ -156,8 +173,9 @@ platform/fs      ⭐     FFI：目录遍历、大小统计、清理
 verify/workspace ⭐     隔离工作区生命周期 + 磁盘配额 + 并发调度
 verify/check     ⭐     工具链驱动（moon check / build / test）
 verify/diagnose  ⭐⭐   编译器诊断解析 → 失败分类
-verify/report           结构化结果 + 人类可读结论
-report/*                本地报告 / JSON 输出 / 公开静态站
+report/model            报告数据模型（纯计算，与验证层解耦）
+report/json             机器可读输出（含 schemaVersion 与完整转义）
+report/site             公开静态站（单文件 HTML，零依赖）
 features/*              命令实现（survey / inspect / doctor）
 ```
 
