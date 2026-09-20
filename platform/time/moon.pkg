@@ -1,0 +1,3 @@
+///|
+/// platform/time — 耗时与超时判定（纯计算，无 FFI）
+import {}

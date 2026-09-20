@@ -55,7 +55,15 @@ MoonHive 的价值就在于把这个结果**正确归类**：这不是"这个包
 - MoonBit 工具链（开发环境 `moon 0.1.20260904`）
 - git（用于获取待验证的仓库）
 - **构建产物路径必须为纯 ASCII**——GNU assembler 无法处理含非 ASCII 字符的路径。
-  若仓库位于中文路径下，请显式指定构建目录：
+  仓库自带 `build.ps1` 会自动把产物重定向到系统临时目录，因此直接用它即可：
+
+```powershell
+./build.ps1              # 构建
+./build.ps1 -Test        # 构建 + 测试
+./build.ps1 -Run doctor  # 构建 + 运行 moonhive doctor
+```
+
+  手工构建时需显式指定纯 ASCII 的产物目录：
 
 ```bash
 moon build --target native --release --target-dir /path/to/ascii/dir
@@ -65,10 +73,9 @@ moon build --target native --release --target-dir /path/to/ascii/dir
 > （常见情况：系统配置了 `http.sslBackend = schannel` 而该后端不可用，
 > 执行 `git config --global http.sslBackend openssl` 即可）。
 
-### 构建与运行
+### 运行
 
 ```bash
-moon build --target native
 moon run cmd/moonhive --target native -- doctor
 ```
 

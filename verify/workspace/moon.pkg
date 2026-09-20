@@ -1,0 +1,7 @@
+///|
+/// verify/workspace — 隔离工作区（目录生命周期、配额、清理）
+import {
+  "Duckweed/moon-hive/platform/fs" @fs,
+  "Duckweed/moon-hive/platform/proc" @proc,
+  "moonbitlang/core/env" @env,
+}

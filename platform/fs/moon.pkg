@@ -1,0 +1,12 @@
+///|
+/// platform/fs — 文件系统层
+///
+/// 只有本包（与 platform/proc）允许出现 C FFI。
+options(
+  "native-stub": ["fs_stub.c"],
+)
+
+import {
+  "Duckweed/moon-hive/platform/proc" @proc,
+  "moonbitlang/core/env" @env,
+}
