@@ -42,11 +42,49 @@ MoonHive 的价值就在于把这个结果**正确归类**：这不是"这个包
 
 | 模块 | 状态 |
 |---|---|
-| `platform/proc` — FFI 进程执行 / 文件读写 | ✅ 已完成 |
+| `platform/proc` — FFI 子进程执行 / 文件读写 | ✅ 已完成 |
+| `platform/fs` — FFI 目录遍历 / 复制 / 清理 | ✅ 已完成 |
+| `platform/time` — 超时预算与耗时格式化 | ✅ 已完成 |
 | `core/error` — 统一错误契约 | ✅ 已完成 |
+| `verify/workspace` — 隔离工作区 / 配额 / 清理 | ✅ 已完成 |
+| `verify/gitsource` — 候选解析 / git 克隆 / TLS 后端探测 | ✅ 已完成 |
+| `verify/diagnose` — 九类结论分类器（核心资产） | ✅ 已完成 |
+| `verify/check` — 工具链驱动与验证编排 | ✅ 已完成 |
 | `features/doctor` — 环境自检 | ✅ 已完成 |
-| `verify/*` — 工作区 / 工具链驱动 / 诊断分类 | 🚧 开发中 |
+| `features/inspect` — 单包深度体检 | ✅ 已完成 |
+| `features/survey` — 批量普查主命令 | 🚧 开发中 |
 | `report/*` — 报告与公开静态站 | 🚧 开发中 |
+
+### 已验证的真实效果
+
+```
+$ moonhive inspect <模块目录> <另一个模块>
+
+git TLS 后端: openssl（系统默认后端不可用，已按命令显式指定）
+工作区: .../moonhive-workspaces/moonhive-workspace-1789913651020
+目标后端: native
+
+[1/4] ✅ Verified
+   结论: Verified
+   说明: 编译与测试通过，可以直接使用
+   规模: 1 个 .mbt / 8 行 / 0 个测试文件 / 136 B
+   耗时: check 179ms / test 2.8s
+
+[2/4] ❌ DoesNotCompile
+   证据: [ .../lib/a.mbt:2:3 ]
+
+结论汇总（共 4 个）
+  Verified: 1   DoesNotCompile: 1   NoManifest: 1   Unsafe: 1
+```
+
+### 输入形式
+
+`inspect` 接受三种写法：
+
+- `owner/repo` — 远端仓库（走 git 克隆）
+- `https://github.com/owner/repo` — 完整 URL
+- `C:\path\to\pkg` 或 `./pkg` — **本地目录**，直接复制进隔离工作区验证，无需联网
+  （适合验证你手上已有的 checkout，也便于离线复现结论）
 
 ## 快速开始
 
@@ -76,7 +114,14 @@ moon build --target native --release --target-dir /path/to/ascii/dir
 ### 运行
 
 ```bash
+# 环境自检（会检出 git TLS 后端问题并给出修复建议）
 moon run cmd/moonhive --target native -- doctor
+
+# 体检一个远端仓库
+moon run cmd/moonhive --target native -- inspect moonbit-community/yaml
+
+# 体检一个本地目录（无需联网）
+moon run cmd/moonhive --target native -- inspect ./some-package
 ```
 
 ### 环境自检
