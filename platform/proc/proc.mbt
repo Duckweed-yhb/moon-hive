@@ -32,7 +32,6 @@ pub suberror ProcError {
   /// stderr 重定向文件不可写
   StderrCaptureFailed(Int)
 }
-
 // ---------- C FFI 声明 ----------
 
 #borrow(cmd, workdir, out_stdout, out_stderr)
@@ -52,22 +51,33 @@ extern "C" fn fs_remove_raw(path : String) -> Int = "fs_remove"
 
 extern "C" fn proc_last_elapsed_ms_raw() -> UInt64 = "proc_last_elapsed_ms"
 
+extern "C" fn proc_last_os_error_raw() -> Int = "proc_last_os_error"
+
 extern "C" fn proc_exit_raw(code : Int) -> Unit = "proc_exit"
+
+///|
+/// 最近一次进程层失败对应的操作系统错误码（诊断用）。
+/// Windows 上是 GetLastError() 的值，其他平台是 errno。
+pub fn last_os_error() -> Int {
+  proc_last_os_error_raw()
+}
 
 // ---------- 错误码映射 ----------
 
 ///|
 /// 把 C 侧错误码翻译成类型化错误。
-/// C 侧约定：-1 popen 失败，-2 stderr 文件失败，-3 内存失败，-4 空命令。
+///
+/// C 侧约定（必须与真实退出码区分开）：
+///   -1001 空命令 / -1002 无法创建管道 / -1003 stderr 文件不可写 / -1004 内存不足
 fn map_error_code(code : Int) -> ProcError? {
-  if code == -1 {
-    Some(SpawnFailed)
-  } else if code == -2 {
-    Some(StderrCaptureFailed(code))
-  } else if code == -3 {
-    Some(OutOfMemory)
-  } else if code == -4 {
+  if code == -1001 {
     Some(EmptyCommand)
+  } else if code == -1002 {
+    Some(SpawnFailed)
+  } else if code == -1003 {
+    Some(StderrCaptureFailed(code))
+  } else if code == -1004 {
+    Some(OutOfMemory)
   } else {
     None
   }

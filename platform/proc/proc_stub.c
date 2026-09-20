@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -34,15 +35,27 @@
 #define UNLINK unlink
 #endif
 
-/* ---------- 错误码 ---------- */
+/* ---------- 错误码 ----------
+ *
+ * 重要：这些错误码必须与「被调用进程的真实退出码」区分开。
+ * 早期版本把 PROC_ERR_POPEN 定义为 -1，而 Windows 上 pclose 在命令
+ * 运行失败时**也**返回 -1，导致「命令正常失败」被误报成「无法创建进程」。
+ * 因此这里把内部错误码统一移到 -1000 以下，并显式把 pclose 的返回值
+ * 与错误码分开上报。
+ */
 #define PROC_OK 0
-#define PROC_ERR_POPEN (-1)
-#define PROC_ERR_STDERR_FILE (-2)
-#define PROC_ERR_ALLOC (-3)
-#define PROC_ERR_EMPTY_CMD (-4)
+#define PROC_ERR_EMPTY_CMD (-1001)
+#define PROC_ERR_POPEN (-1002)
+#define PROC_ERR_STDERR_FILE (-1003)
+#define PROC_ERR_ALLOC (-1004)
 
 static int32_t g_last_error = PROC_OK;
 static uint64_t g_last_elapsed_ms = 0;
+
+/* 供 MoonBit 侧读取：popen 失败时的 OS 错误码，便于定位原因 */
+static int32_t g_last_os_error = 0;
+
+int32_t proc_last_os_error(void) { return g_last_os_error; }
 
 /* ---------- 工具函数 ---------- */
 
@@ -67,7 +80,8 @@ static void mbt_str_to_ascii(moonbit_string_t src, char *dst, int32_t cap) {
   dst[n] = 0;
 }
 
-/* ASCII C 串 → MoonBit String。保留原始字节，不做换行替换。 */
+/* ASCII C 串 → MoonBit String。保留原始字节，不做换行替换。
+   （仅用于确定是 ASCII 的场景，例如版本号） */
 static moonbit_string_t ascii_to_mbt_str(const char *src, int32_t len) {
   if (len < 0) {
     len = 0;
@@ -77,6 +91,96 @@ static moonbit_string_t ascii_to_mbt_str(const char *src, int32_t len) {
     out[i] = (uint16_t)(unsigned char)src[i];
   }
   return out;
+}
+
+/* ---------- UTF-8 → UTF-16 ----------
+ *
+ * 为什么需要它：MoonBit 的 String 是 UTF-16。若把文件的原始字节
+ * 逐字节当作 UTF-16 码元，任何多字节字符都会变成乱码
+ * （实测：编译器输出里的框线字符变成 âââ）。
+ *
+ * 这里做一次正规的 UTF-8 解码，并处理以下情况：
+ *   - 合法的 1/2/3/4 字节序列 → 对应的 UTF-16 码元（含代理对）
+ *   - 非法序列、截断序列、BOM(EF BB BF) → 跳过或替换，绝不产生乱码
+ */
+static int32_t utf8_to_utf16(const unsigned char *src, int32_t len,
+                             uint16_t *out, int32_t out_cap) {
+  int32_t n = 0;
+  int32_t i = 0;
+  /* 跳过 UTF-8 BOM */
+  if (len >= 3 && src[0] == 0xEF && src[1] == 0xBB && src[2] == 0xBF) {
+    i = 3;
+  }
+  while (i < len) {
+    unsigned char c = src[i];
+    uint32_t cp = 0;
+    int32_t extra = 0;
+
+    if (c < 0x80) {
+      cp = c;
+      extra = 0;
+    } else if ((c & 0xE0) == 0xC0) {
+      cp = c & 0x1F;
+      extra = 1;
+    } else if ((c & 0xF0) == 0xE0) {
+      cp = c & 0x0F;
+      extra = 2;
+    } else if ((c & 0xF8) == 0xF0) {
+      cp = c & 0x07;
+      extra = 3;
+    } else {
+      /* 非法起始字节 */
+      if (n < out_cap) {
+        out[n++] = (uint16_t)'?';
+      }
+      i++;
+      continue;
+    }
+
+    if (i + extra >= len) {
+      /* 截断序列 */
+      if (n < out_cap) {
+        out[n++] = (uint16_t)'?';
+      }
+      i = len;
+      break;
+    }
+    int32_t ok = 1;
+    for (int32_t k = 1; k <= extra; k++) {
+      unsigned char cc = src[i + k];
+      if ((cc & 0xC0) != 0x80) {
+        ok = 0;
+        break;
+      }
+      cp = (cp << 6) | (uint32_t)(cc & 0x3F);
+    }
+    if (!ok) {
+      if (n < out_cap) {
+        out[n++] = (uint16_t)'?';
+      }
+      i++;
+      continue;
+    }
+    i += extra + 1;
+
+    /* 编码为 UTF-16 */
+    if (cp < 0x10000) {
+      if (n < out_cap) {
+        out[n++] = (uint16_t)cp;
+      }
+    } else if (cp <= 0x10FFFF) {
+      cp -= 0x10000;
+      if (n + 1 < out_cap) {
+        out[n++] = (uint16_t)(0xD800 | (cp >> 10));
+        out[n++] = (uint16_t)(0xDC00 | (cp & 0x3FF));
+      }
+    } else {
+      if (n < out_cap) {
+        out[n++] = (uint16_t)'?';
+      }
+    }
+  }
+  return n;
 }
 
 static const char *temp_name(const char *suffix, char *buf, int32_t cap) {
@@ -153,8 +257,14 @@ int32_t proc_run_capture(moonbit_string_t cmd, moonbit_string_t workdir,
   FILE *fp = POPEN(full_cmd, "r");
   if (fp == NULL) {
     g_last_error = PROC_ERR_POPEN;
+#ifdef _WIN32
+    g_last_os_error = (int32_t)GetLastError();
+#else
+    g_last_os_error = errno;
+#endif
     return PROC_ERR_POPEN;
   }
+  g_last_os_error = 0;
 
   /* 累积 stdout */
   int32_t cap = 8192, len = 0;
@@ -262,7 +372,17 @@ moonbit_string_t fs_read_text(moonbit_string_t path) {
     }
   }
   fclose(f);
-  moonbit_string_t out = ascii_to_mbt_str(buf, len);
+  /* 按 UTF-8 解码，避免多字节字符（中文、框线符号）变成乱码 */
+  uint16_t *u16 = (uint16_t *)malloc(sizeof(uint16_t) * ((size_t)len + 1));
+  int32_t un = 0;
+  if (u16 != NULL) {
+    un = utf8_to_utf16((const unsigned char *)buf, len, u16, len + 1);
+  }
+  moonbit_string_t out = moonbit_make_string(un, 0);
+  for (int32_t i = 0; i < un; i++) {
+    out[i] = u16[i];
+  }
+  free(u16);
   free(buf);
   return out;
 }

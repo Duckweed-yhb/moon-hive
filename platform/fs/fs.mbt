@@ -136,6 +136,32 @@ pub fn count_files(path : String, ext : String, max_depth : Int) -> Int {
   list_files(path, ext, max_depth).length()
 }
 
+// ---------- 目录复制 ----------
+
+#borrow(src, dst)
+extern "C" fn fs_copy_tree_ffi(src : String, dst : String) -> Int = "fs_copy_tree"
+
+#borrow(src, dst)
+extern "C" fn fs_copy_file_ffi(src : String, dst : String) -> Int = "fs_copy_file"
+
+///|
+/// 递归复制目录树。
+///
+/// 用途：把用户已有的本地 checkout 复制进隔离工作区再验证——
+/// 这样既不污染原目录，也无需联网。
+///
+/// 自动跳过 `.git` / `_build` / `target` / `node_modules`：
+/// 它们与"能不能编译"无关，且体积可能很大。
+pub fn copy_tree(src : String, dst : String) -> Bool {
+  fs_copy_tree_ffi(src, dst) == 0
+}
+
+///|
+/// 复制单个文件
+pub fn copy_file(src : String, dst : String) -> Bool {
+  fs_copy_file_ffi(src, dst) == 0
+}
+
 // ---------- 单元测试 ----------
 // 这些测试会真实读写临时目录。每个用例使用独立目录，避免相互干扰。
 

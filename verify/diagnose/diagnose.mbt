@@ -14,7 +14,7 @@
 
 ///|
 /// 验证结论
-pub enum Diagnosis {
+pub(all) enum Diagnosis {
   /// 编译与测试全绿
   Verified
   /// 能编译，但测试未通过
@@ -37,7 +37,7 @@ pub enum Diagnosis {
 
 ///|
 /// 一次命令的结果（诊断分类的输入）
-pub struct CommandOutcome {
+pub(all) struct CommandOutcome {
   exit_code : Int
   stdout : String
   stderr : String
@@ -317,7 +317,7 @@ fn truncate(s : String, n : Int) -> String {
 
 ///|
 /// 检查结果汇总（分类的完整输入）
-pub struct CheckOutcome {
+pub(all) struct CheckOutcome {
   /// 目录里是否存在 MoonBit 模块清单
   has_manifest : Bool
   /// 是否含 FFI / 构建脚本（安全起见不执行）

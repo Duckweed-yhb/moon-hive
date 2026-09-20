@@ -1,0 +1,9 @@
+///|
+/// features/inspect — 单包深度体检
+import {
+  "Duckweed/moon-hive/platform/time" @time,
+  "Duckweed/moon-hive/verify/check" @check,
+  "Duckweed/moon-hive/verify/diagnose" @diagnose,
+  "Duckweed/moon-hive/verify/gitsource" @gitsource,
+  "Duckweed/moon-hive/verify/workspace" @workspace,
+}

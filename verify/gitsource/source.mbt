@@ -7,12 +7,14 @@
 ///|
 /// 候选仓库在本地工作区里的坐标
 pub struct Candidate {
-  /// 仓库标识，形如 "owner/repo"
+  /// 仓库标识，形如 "owner/repo"（本地目录时为目录名）
   slug : String
   /// 克隆用的 HTTPS 地址
   url : String
   /// 要检出的分支或标签；空串表示远端默认分支
   git_ref : String
+  /// 非空表示这是本地目录而非远端仓库——此时直接复制该目录，不联网
+  local_path : String
 }
 
 ///|
@@ -22,6 +24,74 @@ pub suberror CandidateError {
   BadSlug(String)
   /// URL 不是受支持的 HTTPS 地址
   BadUrl(String)
+  /// 本地路径不存在或不是目录
+  BadLocalPath(String)
+}
+
+///|
+/// 判断输入是否是一个本地目录路径（而非 owner/repo）。
+///
+/// 识别规则：含路径分隔符、以 `.` 开头（相对路径）、含盘符、或本身是
+/// 一个已存在的目录。这样 `C:\proj\pkg`、`./pkg`、`../pkg` 都会走本地路径。
+pub fn looks_like_local_path(raw : String) -> Bool {
+  let s = raw.trim().to_owned()
+  if s.length() == 0 {
+    return false
+  }
+  if s.contains(":\\") || s.has_prefix("./") || s.has_prefix("../") || s.has_prefix("/") {
+    return true
+  }
+  // 已经是存在的目录
+  @fs.is_dir(s)
+}
+
+///|
+/// 从本地目录构造候选仓库。
+/// `slug` 取目录名，用于展示与工作区子目录命名。
+pub fn from_local(path : String) -> Result[Candidate, CandidateError] {
+  let p = path.trim().to_owned()
+  if !@fs.is_dir(p) {
+    return Err(BadLocalPath(p))
+  }
+  let slug = basename(p)
+  if slug.length() == 0 {
+    return Err(BadLocalPath(p))
+  }
+  Ok({
+    slug,
+    url: p,
+    git_ref: "",
+    local_path: p,
+  })
+}
+
+///|
+/// 取出路径的最后一段作为名字
+fn basename(p : String) -> String {
+  let mut s = p
+  while s.length() > 1 && (s.unsafe_get(s.length() - 1) == '/' || s.unsafe_get(s.length() - 1) == '\\') {
+    s = s.substring(start=0, end=s.length() - 1)
+  }
+  let mut last = -1
+  for i = 0; i < s.length(); i = i + 1 {
+    let c = s.unsafe_get(i)
+    if c == '/' || c == '\\' {
+      last = i
+    }
+  }
+  if last < 0 {
+    s
+  } else if last == s.length() - 1 {
+    ""
+  } else {
+    s.substring(start=last + 1, end=s.length())
+  }
+}
+
+///|
+/// 是否为本地目录候选
+pub fn is_local(c : Candidate) -> Bool {
+  c.local_path.length() > 0
 }
 
 ///|
@@ -75,7 +145,7 @@ pub fn from_slug(raw : String) -> Result[Candidate, CandidateError] {
   if !is_valid_slug(slug) {
     return Err(BadSlug(raw))
   }
-  Ok({ slug, url: "https://github.com/" + slug + ".git", git_ref: "" })
+  Ok({ slug, url: "https://github.com/" + slug + ".git", git_ref: "", local_path: "" })
 }
 
 ///|
@@ -93,7 +163,7 @@ pub fn from_url(url : String) -> Result[Candidate, CandidateError] {
 ///|
 /// 指定检出引用（分支 / 标签 / 提交）
 pub fn with_ref(c : Candidate, git_ref : String) -> Candidate {
-  { slug: c.slug, url: c.url, git_ref }
+  { slug: c.slug, url: c.url, git_ref, local_path: c.local_path }
 }
 
 ///|

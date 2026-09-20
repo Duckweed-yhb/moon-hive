@@ -4,6 +4,7 @@ pkgtype(kind: "executable")
 
 import {
   "Duckweed/moon-hive/features/doctor" @doctor,
+  "Duckweed/moon-hive/features/inspect" @inspect,
   "Duckweed/moon-hive/platform/proc" @proc,
   "moonbitlang/core/env" @env,
 }

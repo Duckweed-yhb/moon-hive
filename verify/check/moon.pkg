@@ -1,0 +1,9 @@
+///|
+/// verify/check — 工具链驱动与验证编排
+import {
+  "Duckweed/moon-hive/platform/fs" @fs,
+  "Duckweed/moon-hive/platform/proc" @proc,
+  "Duckweed/moon-hive/verify/diagnose" @diagnose,
+  "Duckweed/moon-hive/verify/gitsource" @gitsource,
+  "Duckweed/moon-hive/verify/workspace" @workspace,
+}

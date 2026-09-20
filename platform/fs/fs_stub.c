@@ -161,9 +161,8 @@ int64_t fs_file_size(moonbit_string_t path) {
 
 /* ---------- 目录创建 ---------- */
 
-int32_t fs_mkdir_all(moonbit_string_t path) {
-  char p[FS_MAX_PATH];
-  fs_str_to_ascii(path, p, (int32_t)sizeof(p));
+/* 递归创建目录的内部实现（供多处复用） */
+static int32_t mkdir_all_c(char *p) {
   if (p[0] == 0) {
     return -1;
   }
@@ -190,6 +189,12 @@ int32_t fs_mkdir_all(moonbit_string_t path) {
     }
   }
   return 0;
+}
+
+int32_t fs_mkdir_all(moonbit_string_t path) {
+  char p[FS_MAX_PATH];
+  fs_str_to_ascii(path, p, (int32_t)sizeof(p));
+  return mkdir_all_c(p);
 }
 
 /* ---------- 递归删除（内部用纯 C 字符串） ---------- */
@@ -254,6 +259,145 @@ int32_t fs_rm_rf(moonbit_string_t path) {
   }
 #endif
   return fs_rm_rf_c(p);
+}
+
+/* ---------- 文件读写 ---------- */
+
+/* 复制单个文件；成功返回 0 */
+int32_t fs_copy_file(moonbit_string_t src, moonbit_string_t dst) {
+  char sp[FS_MAX_PATH];
+  char dp[FS_MAX_PATH];
+  fs_str_to_ascii(src, sp, (int32_t)sizeof(sp));
+  fs_str_to_ascii(dst, dp, (int32_t)sizeof(dp));
+
+  FILE *in = fopen(sp, "rb");
+  if (in == NULL) {
+    return -1;
+  }
+  FILE *out = fopen(dp, "wb");
+  if (out == NULL) {
+    fclose(in);
+    return -2;
+  }
+  char buf[65536];
+  size_t n;
+  while ((n = fread(buf, 1, sizeof(buf), in)) > 0) {
+    if (fwrite(buf, 1, n, out) != n) {
+      fclose(in);
+      fclose(out);
+      return -3;
+    }
+  }
+  fclose(in);
+  fclose(out);
+  return 0;
+}
+
+/* 递归复制目录。跳过 .git / _build / target 等与验证无关且体积大的目录。 */
+static int32_t fs_copy_tree_c(const char *src, const char *dst) {
+  if (fs_kind_c(src) != FS_DIR) {
+    return -1;
+  }
+  if (mkdir_all_c(dst) != 0) {
+    return -2;
+  }
+
+#ifdef _WIN32
+  char pattern[FS_MAX_PATH + 8];
+  snprintf(pattern, sizeof(pattern), "%s\\*", src);
+  WIN32_FIND_DATAA fd;
+  HANDLE h = FindFirstFileA(pattern, &fd);
+  if (h == INVALID_HANDLE_VALUE) {
+    return 0;
+  }
+  do {
+    if (strcmp(fd.cFileName, ".") == 0 || strcmp(fd.cFileName, "..") == 0) {
+      continue;
+    }
+    /* 跳过与验证无关的目录，避免无谓的磁盘占用与耗时 */
+    if (strcmp(fd.cFileName, ".git") == 0 || strcmp(fd.cFileName, "_build") == 0 ||
+        strcmp(fd.cFileName, "target") == 0 || strcmp(fd.cFileName, "node_modules") == 0) {
+      continue;
+    }
+    char cs[FS_MAX_PATH + 8];
+    char cd[FS_MAX_PATH + 8];
+    fs_join(cs, (int32_t)sizeof(cs), src, fd.cFileName);
+    fs_join(cd, (int32_t)sizeof(cd), dst, fd.cFileName);
+    if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+      fs_copy_tree_c(cs, cd);
+    } else {
+      char sp2[FS_MAX_PATH];
+      char dp2[FS_MAX_PATH];
+      strncpy(sp2, cs, sizeof(sp2) - 1);
+      sp2[sizeof(sp2) - 1] = 0;
+      strncpy(dp2, cd, sizeof(dp2) - 1);
+      dp2[sizeof(dp2) - 1] = 0;
+      FILE *in = fopen(sp2, "rb");
+      if (in != NULL) {
+        FILE *out = fopen(dp2, "wb");
+        if (out != NULL) {
+          char buf[65536];
+          size_t n;
+          while ((n = fread(buf, 1, sizeof(buf), in)) > 0) {
+            fwrite(buf, 1, n, out);
+          }
+          fclose(out);
+        }
+        fclose(in);
+      }
+    }
+  } while (FindNextFileA(h, &fd));
+  FindClose(h);
+#else
+  DIR *d = opendir(src);
+  if (d == NULL) {
+    return 0;
+  }
+  struct dirent *e;
+  while ((e = readdir(d)) != NULL) {
+    if (strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0) {
+      continue;
+    }
+    if (strcmp(e->d_name, ".git") == 0 || strcmp(e->d_name, "_build") == 0 ||
+        strcmp(e->d_name, "target") == 0 || strcmp(e->d_name, "node_modules") == 0) {
+      continue;
+    }
+    char cs[FS_MAX_PATH + 8];
+    char cd[FS_MAX_PATH + 8];
+    fs_join(cs, (int32_t)sizeof(cs), src, e->d_name);
+    fs_join(cd, (int32_t)sizeof(cd), dst, e->d_name);
+    if (fs_kind_c(cs) == FS_DIR) {
+      fs_copy_tree_c(cs, cd);
+    } else {
+      FILE *in = fopen(cs, "rb");
+      if (in != NULL) {
+        FILE *out = fopen(cd, "wb");
+        if (out != NULL) {
+          char buf[65536];
+          size_t n;
+          while ((n = fread(buf, 1, sizeof(buf), in)) > 0) {
+            fwrite(buf, 1, n, out);
+          }
+          fclose(out);
+        }
+        fclose(in);
+      }
+    }
+  }
+  closedir(d);
+#endif
+  return 0;
+}
+
+int32_t fs_copy_tree(moonbit_string_t src, moonbit_string_t dst) {
+  char sp[FS_MAX_PATH];
+  char dp[FS_MAX_PATH];
+  fs_str_to_ascii(src, sp, (int32_t)sizeof(sp));
+  fs_str_to_ascii(dst, dp, (int32_t)sizeof(dp));
+  if (sp[0] == 0 || dp[0] == 0) {
+    return -1;
+  }
+  return fs_copy_tree_c(sp, dp);
 }
 
 /* ---------- 遍历与统计 ---------- */
