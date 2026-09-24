@@ -30,8 +30,7 @@ jobs:
       - name: Test (native)
         run: moon test --target native
 
-      - name: CLI smoke test - doctor
-        run: moon run cmd/moonhive --target native -- doctor
-
+      # doctor 依赖真实外网（git ls-remote github.com），在网络波动时
+      # 会误报 FAIL，不适合当 CI 门禁。CI 用 version 验证 CLI 可运行即可。
       - name: CLI smoke test - version
         run: moon run cmd/moonhive --target native -- version
