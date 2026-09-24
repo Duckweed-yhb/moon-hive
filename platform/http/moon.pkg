@@ -1,0 +1,12 @@
+///|
+/// platform/http — 本地 HTTP 服务层
+///
+/// 只有本包（与 platform/proc、platform/fs）允许出现 C FFI。
+/// 职责：在 127.0.0.1 上服务一个本地目录（静态文件 + 两个只读 API），
+/// 供浏览器打开 MoonHive 验证仪表盘。
+///
+/// Winsock 不参与静态链接：moon 的 cc-link-flags 不进入可执行链接，
+/// 且会破坏默认入口。http_stub.c 用 LoadLibrary 运行时加载 ws2_32.dll。
+options(
+  "native-stub": ["http_stub.c"],
+)

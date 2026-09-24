@@ -26,6 +26,7 @@ fn main {
     "doctor" => cmd_doctor()
     "inspect" => cmd_inspect(rest)
     "survey" => cmd_survey(rest)
+    "serve" => @proc.exit_with(@serve.run(rest))
     "version" | "--version" | "-V" => println(version_line())
     "help" | "--help" | "-h" => print_usage()
     other => {
@@ -177,6 +178,8 @@ fn print_usage() -> Unit {
   println("  survey [--out md] [--json f] [--site f] [--registry] <候选>...")
   println("                                  批量普查并生成三种格式的报告")
   println("  inspect [--registry] <候选>...  体检指定仓库：拉下来用真实工具链验证")
+  println("  serve [--dir <目录>] [--port <n>]")
+  println("                                  把报告目录变成浏览器仪表盘（127.0.0.1）")
   println("  doctor                          检查运行环境（工具链 / git / TLS / 临时目录）")
   println("  version                         打印版本")
   println("  help                            打印本帮助")

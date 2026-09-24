@@ -53,11 +53,12 @@ MoonHive 的价值就在于把这个结果**正确归类**：这不是"这个包
 | `features/doctor` — 环境自检 | ✅ 已完成 |
 | `features/inspect` — 单包深度体检 | ✅ 已完成 |
 | `features/survey` — 批量普查主命令 | ✅ 已完成 |
+| `features/serve` — 本地仪表盘（浏览器 UI） | ✅ 已完成 |
 | `report/model` — 报告数据模型 | ✅ 已完成 |
 | `report/json` — 机器可读输出 | ✅ 已完成 |
 | `report/site` — 公开静态站（单文件 HTML） | ✅ 已完成 |
 
-**测试：115 个用例全绿。构建 0 警告。**
+**测试：119 个用例全绿。构建 0 警告。**
 
 ### 三种报告格式
 
@@ -160,6 +161,10 @@ moon run cmd/moonhive --target native -- inspect --registry moonbit-community/ya
 
 # 体检一个本地目录（无需联网）
 moon run cmd/moonhive --target native -- inspect ./some-package
+
+# 把报告目录变成浏览器仪表盘（本地 HTTP，仅监听 127.0.0.1）
+moon run cmd/moonhive --target native -- serve --dir reports
+# 然后打开 http://127.0.0.1:8080/ ；--port 可换端口，--gen-only 只写入口不启动服务
 ```
 
 ### 环境自检
@@ -191,21 +196,24 @@ core/error             统一错误契约 + 退出码映射（纯计算，无平
 core/text              字符串 / 路径 / 表格渲染工具
 platform/proc    ⭐     FFI：子进程执行、输出捕获、文件读写
 platform/fs      ⭐     FFI：目录遍历、大小统计、清理
+platform/http    ⭐     FFI：本地 HTTP 服务（仪表盘后端，仅监听 127.0.0.1）
 verify/workspace ⭐     隔离工作区生命周期 + 磁盘配额 + 并发调度
 verify/check     ⭐     工具链驱动（moon check / build / test）
 verify/diagnose  ⭐⭐   编译器诊断解析 → 失败分类
 report/model            报告数据模型（纯计算，与验证层解耦）
 report/json             机器可读输出（含 schemaVersion 与完整转义）
 report/site             公开静态站（单文件 HTML，零依赖）
-features/*              命令实现（survey / inspect / doctor）
+features/*              命令实现（survey / inspect / doctor / serve）
 ```
 
 **分层边界（可替换性声明）**：
-- 只有 `platform/*` 允许出现 C FFI。想换掉底层实现，只需替换这两个包。
+- 只有 `platform/*` 允许出现 C FFI。想换掉底层实现，只需替换这几个包。
 - 只有 `verify/check` 知道如何调用 `moon` 命令。
 - `core/*` 与 `report/*` 不知道文件系统与进程的存在，因此可以 100% 单元测试。
 
 **为什么用 C FFI**：`moonbitlang/core` 不提供文件系统与进程模块（它们只在第三方的 `moonbitlang/async` 中）。本项目的核心能力——起进程跑工具链、读编译器诊断——必须依赖它们，因此自建 FFI 层而不是引入第三方包。
+
+**仪表盘的网络层**：`platform/http` 是零第三方依赖的静态服务器——只监听回环地址、只允许 GET、拒绝路径穿越（`..`）。Windows 上 winsock 通过 `LoadLibrary("ws2_32.dll")` 在运行时加载，不参与静态链接（moon 的 `cc-link-flags` 不进入可执行链接）。
 
 **为什么只在 native 后端构建**：C FFI 不支持 wasm 后端。这是有意的架构选择：本工具是本地 CLI，不需要在浏览器或 wasm 运行时里跑。
 
