@@ -53,7 +53,7 @@ pub fn create() -> Result[Workspace, WorkspaceError] {
   if !@fs.mkdir_all(root) {
     return Err(CannotCreateRoot(root))
   }
-  Ok({ root })
+  Ok({ root: root })
 }
 
 ///|
@@ -66,7 +66,7 @@ pub fn create_in(base : String, name : String) -> Result[Workspace, WorkspaceErr
   if !@fs.mkdir_all(root) {
     return Err(CannotCreateRoot(root))
   }
-  Ok({ root })
+  Ok({ root: root })
 }
 
 ///|
@@ -125,7 +125,7 @@ fn normalize(p : String) -> String {
   let s = b.to_string()
   // 去掉末尾分隔符
   if s.length() > 1 && s.unsafe_get(s.length() - 1) == '\\' {
-    s.substring(start=0, end=s.length() - 1)
+    s[:s.length() - 1].to_owned()
   } else {
     s
   }
@@ -247,11 +247,11 @@ fn top_level_of(base : String, file : String) -> String {
   if f.length() <= prefix_len || !f.has_prefix(b + "\\") {
     return ""
   }
-  let rest = f.substring(start=prefix_len, end=f.length())
+  let rest = f[prefix_len:].to_owned()
   for i = 0; i < rest.length(); i = i + 1 {
     let c = rest.unsafe_get(i)
     if c == '\\' || c == '/' {
-      return b + "\\" + rest.substring(start=0, end=i)
+      return b + "\\" + rest[:i].to_owned()
     }
   }
   b + "\\" + rest

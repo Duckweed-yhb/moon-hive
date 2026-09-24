@@ -309,7 +309,7 @@ fn truncate(s : String, n : Int) -> String {
   if s.length() <= n {
     s
   } else {
-    s.substring(start=0, end=n) + "…"
+    s[:n].to_owned() + "…"
   }
 }
 
@@ -321,7 +321,7 @@ pub(all) struct CheckOutcome {
   /// 目录里是否存在 MoonBit 模块清单
   has_manifest : Bool
   /// 是否含 FFI / 构建脚本（安全起见不执行）
-  unsafe : Bool
+  risky : Bool
   /// 是否超出时间预算
   timed_out : Bool
   /// moon check 的结果
@@ -345,7 +345,7 @@ pub fn classify(o : CheckOutcome) -> Diagnosis {
     return NoManifest
   }
   // 2. 安全：含 FFI / 构建脚本时不执行
-  if o.unsafe {
+  if o.risky {
     return Unsafe
   }
   // 3. 超时
@@ -436,7 +436,7 @@ fn fail_out(text : String) -> CommandOutcome {
 fn base_outcome() -> CheckOutcome {
   {
     has_manifest: true,
-    unsafe: false,
+    risky: false,
     timed_out: false,
     check: ok_out(),
     test_outcome: None,
@@ -451,7 +451,7 @@ test "classify: 无清单 → NoManifest" {
 }
 
 test "classify: 含 FFI → Unsafe（不执行）" {
-  let o = { ..base_outcome(), unsafe: true }
+  let o = { ..base_outcome(), risky: true }
   assert_eq(classify(o), Unsafe)
 }
 

@@ -38,8 +38,6 @@ pub(all) struct RevResult {
 pub suberror CheckError {
   /// 工作区操作失败
   WorkspaceFailed(String)
-  /// 获取仓库失败
-  FetchFailed(String)
 }
 
 ///|
@@ -190,11 +188,11 @@ pub fn verify_candidate(
   // 2. 静态预检 + 规模测量（不执行任何仓库代码）
   let has_manifest = @gitsource.is_moonbit_module(dir)
   let (mbt_count, lines, test_count, bytes) = measure_repo(dir)
-  let unsafe = detect_unsafe(dir)
+  let risky = detect_unsafe(dir)
   let (target_label, declared) = (target, detect_declared_targets(dir))
 
   // 3. 不满足前提或存在风险时，直接给出结论，不执行工具链
-  if !has_manifest || unsafe {
+  if !has_manifest || risky {
     let diag = if !has_manifest {
       @diagnose.NoManifest
     } else {
@@ -243,7 +241,7 @@ pub fn verify_candidate(
   // 6. 交给分类器下结论
   let outcome : @diagnose.CheckOutcome = {
     has_manifest,
-    unsafe,
+    risky,
     timed_out,
     check: check_out,
     test_outcome,
@@ -261,6 +259,160 @@ pub fn verify_candidate(
     test_files: test_count,
     fetched: true,
   })
+}
+
+///|
+/// 从注册表（mooncakes）验证一个包的**发布版本**。
+///
+/// 与 git clone 的区别：clone 拿到的是仓库默认分支的最新代码（可能是
+/// 未发布的开发中代码），而 `moon fetch` 拿到的是用户 `moon add` 时
+/// 真正会装到的注册表发布版本——因此"发布版本能不能用"更贴合实际问题。
+/// （实测佐证：moonbit-community/yaml 的 GitHub 默认分支没有 moon.mod，
+///  判为 NoManifest；而注册表发布版 0.0.6 check 全绿、69 测试通过。）
+///
+/// 实现：在工作区子目录里执行 `moon fetch <slug>`，包会落到
+/// `<dir>/.repos/<owner>/<repo>/<version>`，定位含 moon.mod 的目录后，
+/// 与 git 路径共用 check/test/classify 全流程。
+pub fn verify_registry_candidate(
+  slug : String,
+  w : @workspace.Workspace,
+  target : String,
+  timeout_ms : Int,
+  with_test : Bool,
+) -> Result[RevResult, CheckError] {
+  let dir_name = @gitsource.to_dir_name(slug)
+  let dir = match @workspace.alloc(w, dir_name) {
+    Ok(d) => d
+    Err(_) => return Err(WorkspaceFailed("无法分配工作区子目录: " + dir_name))
+  }
+
+  // 1. 用 moon fetch 拉取注册表发布版本
+  match @proc.run("moon fetch " + slug, dir, timeout_ms) {
+    Err(e) => return Ok(empty_result(slug, @diagnose.FetchFailed(proc_error_text(e))))
+    Ok(o) =>
+      if o.exit_code != 0 {
+        let ev = @diagnose.first_error_line(o.stdout + "\n" + o.stderr)
+        return Ok(
+          empty_result(
+            slug,
+            @diagnose.FetchFailed(if ev.length() > 0 { ev } else { "moon fetch 失败" }),
+          ),
+        )
+      }
+  }
+
+  // 2. 定位下载的包目录（.repos/... 下含 moon.mod 的目录）
+  let pkg = match locate_registry_pkg(dir) {
+    Some(p) => p
+    None => return Ok(empty_result(slug, @diagnose.NoManifest))
+  }
+
+  // 3. 静态预检 + 规模测量（与 git 路径共用同一套判定）
+  let has_manifest = @gitsource.is_moonbit_module(pkg)
+  let (mbt_count, lines, test_count, bytes) = measure_repo(pkg)
+  let risky = detect_unsafe(pkg)
+  let (target_label, declared) = (target, detect_declared_targets(pkg))
+
+  // 不满足前提或存在风险时，直接给出结论，不执行工具链
+  if !has_manifest || risky {
+    let diag = if !has_manifest {
+      @diagnose.NoManifest
+    } else {
+      @diagnose.Unsafe
+    }
+    return Ok({
+      slug,
+      diagnosis: diag,
+      check_ms: 0UL,
+      test_ms: 0UL,
+      repo_bytes: bytes,
+      mbt_files: mbt_count,
+      source_lines: lines,
+      test_files: test_count,
+      fetched: true,
+    })
+  }
+
+  // 4. 跑 moon check（cwd 为包目录）
+  let check_cmd = "moon check --target " + target_label
+  let (check_out, check_ms) = match @proc.run(check_cmd, pkg, timeout_ms) {
+    Ok(o) => (to_outcome(o), o.elapsed_ms)
+    Err(e) => (
+      { exit_code: -1, stdout: "", stderr: proc_error_text(e) },
+      0UL,
+    )
+  }
+  let mut timed_out = check_ms > timeout_ms.to_uint64()
+
+  // 5. check 通过且允许时，跑 moon test
+  let mut test_outcome : @diagnose.CommandOutcome? = None
+  let mut test_ms = 0UL
+  if check_out.exit_code == 0 && with_test {
+    match @proc.run("moon test --target " + target_label, pkg, timeout_ms) {
+      Ok(o) => {
+        test_outcome = Some(to_outcome(o))
+        test_ms = o.elapsed_ms
+        if test_ms > timeout_ms.to_uint64() {
+          timed_out = true
+        }
+      }
+      Err(_) => ()
+    }
+  }
+
+  // 6. 交给分类器下结论
+  let outcome : @diagnose.CheckOutcome = {
+    has_manifest,
+    risky,
+    timed_out,
+    check: check_out,
+    test_outcome,
+    declared_targets: declared,
+    target: target_label,
+  }
+  Ok({
+    slug,
+    diagnosis: @diagnose.classify(outcome),
+    check_ms,
+    test_ms,
+    repo_bytes: bytes,
+    mbt_files: mbt_count,
+    source_lines: lines,
+    test_files: test_count,
+    fetched: true,
+  })
+}
+
+///|
+/// 在 `.repos` 下载目录中定位含 moon.mod 的包目录。
+///
+/// 不能用 `list_files(dir, "moon.mod", ...)`：平台层按"扩展名"过滤，
+/// 要求文件名长度严格大于扩展名，恰好叫 moon.mod 的文件匹配不到。
+/// 因此列出全部文件后手动过滤后缀。
+fn locate_registry_pkg(dir : String) -> String? {
+  for f in @fs.list_files(dir, "", 6) {
+    if f.has_suffix("moon.mod") {
+      return Some(parent_dir(f))
+    }
+  }
+  None
+}
+
+///|
+/// 取文件所在目录（字符串层面，不触碰文件系统）
+fn parent_dir(f : String) -> String {
+  let mut last = -1
+  for i = 0; i < f.length(); i = i + 1 {
+    let c = f.unsafe_get(i)
+    if c == '/' || c == '\\' {
+      last = i
+    }
+  }
+  if last < 0 {
+    f
+  } else {
+    f[:last].to_owned()
+  }
 }
 
 ///|

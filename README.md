@@ -96,12 +96,30 @@ git TLS 后端: openssl（系统默认后端不可用，已按命令显式指定
 
 ### 输入形式
 
-`inspect` 接受三种写法：
+`inspect` / `survey` 接受三种写法：
 
 - `owner/repo` — 远端仓库（走 git 克隆）
 - `https://github.com/owner/repo` — 完整 URL
 - `C:\path\to\pkg` 或 `./pkg` — **本地目录**，直接复制进隔离工作区验证，无需联网
   （适合验证你手上已有的 checkout，也便于离线复现结论）
+
+加 `--registry` 后，候选被当作 **mooncakes 包名**（仍为 `owner/repo` 形式），改用 `moon fetch` 验证注册表发布版本。
+
+### 两种获取方式：仓库最新代码 vs 注册表发布版
+
+同一个包，`git clone` 拿到的是**仓库默认分支的最新代码**（可能是未发布的开发中代码），而用户实际 `moon add` 装到的是**注册表上的发布版本**。两者可能给出截然不同的结论——MoonHive 两种都支持：
+
+```
+# 走 git clone，验证仓库默认分支的最新代码
+$ moonhive inspect moonbit-community/yaml
+[1/1] 📄 yaml   结论: NoManifest   （GitHub 默认分支没有 moon.mod）
+
+# 走注册表，验证用户真正会装到的发布版本
+$ moonhive inspect --registry moonbit-community/yaml
+[1/1] ✅ moonbit-community/yaml   结论: Verified   （发布版 0.0.6，69 个测试全过）
+```
+
+默认走 `git clone`；加 `--registry` 后候选按 mooncakes 包名处理，用 `moon fetch` 拉取发布版本再验证。**"用户会装到的那个版本能不能用"比"仓库最新代码能不能用"更贴近真实问题。**
 
 ## 快速开始
 
@@ -134,8 +152,11 @@ moon build --target native --release --target-dir /path/to/ascii/dir
 # 环境自检（会检出 git TLS 后端问题并给出修复建议）
 moon run cmd/moonhive --target native -- doctor
 
-# 体检一个远端仓库
+# 体检一个远端仓库（走 git clone，验证默认分支最新代码）
 moon run cmd/moonhive --target native -- inspect moonbit-community/yaml
+
+# 体检一个注册表包（moon fetch 发布版本，用户真正会装到的那个）
+moon run cmd/moonhive --target native -- inspect --registry moonbit-community/yaml
 
 # 体检一个本地目录（无需联网）
 moon run cmd/moonhive --target native -- inspect ./some-package

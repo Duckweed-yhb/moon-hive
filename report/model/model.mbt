@@ -12,40 +12,40 @@
 /// 报告中的单条结果（扁平、自包含）
 pub(all) struct ResultRow {
   /// 仓库标识
-  pub slug : String
+  slug : String
   /// 结论标签，例如 Verified
-  pub diagnosis : String
+  diagnosis : String
   /// 人类可读解释
-  pub explain : String
+  explain : String
   /// 结论证据（首条诊断信息）
-  pub evidence : String
+  evidence : String
   /// 是否成功获取到代码
-  pub fetched : Bool
+  fetched : Bool
   /// .mbt 文件数
-  pub mbt_files : Int
+  mbt_files : Int
   /// 源码行数
-  pub source_lines : Int
+  source_lines : Int
   /// 测试文件数
-  pub test_files : Int
+  test_files : Int
   /// 仓库体积（字节）
-  pub repo_bytes : Int64
+  repo_bytes : Int64
   /// check 耗时（毫秒）
-  pub check_ms : UInt64
+  check_ms : UInt64
   /// test 耗时（毫秒）
-  pub test_ms : UInt64
+  test_ms : UInt64
 }
 
 ///|
 /// 完整报告模型
 pub(all) struct ReportModel {
   /// 生成时间（毫秒时间戳）
-  pub generated_at : UInt64
+  generated_at : UInt64
   /// 目标后端
-  pub target : String
+  target : String
   /// 验证所用 MoonBit 工具链版本
-  pub toolchain : String
+  toolchain : String
   /// 逐个结果
-  pub rows : Array[ResultRow]
+  rows : Array[ResultRow]
 }
 
 ///|

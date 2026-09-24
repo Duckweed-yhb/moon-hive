@@ -70,7 +70,7 @@ pub fn from_local(path : String) -> Result[Candidate, CandidateError] {
 fn basename(p : String) -> String {
   let mut s = p
   while s.length() > 1 && (s.unsafe_get(s.length() - 1) == '/' || s.unsafe_get(s.length() - 1) == '\\') {
-    s = s.substring(start=0, end=s.length() - 1)
+    s = s[:s.length() - 1].to_owned()
   }
   let mut last = -1
   for i = 0; i < s.length(); i = i + 1 {
@@ -84,7 +84,7 @@ fn basename(p : String) -> String {
   } else if last == s.length() - 1 {
     ""
   } else {
-    s.substring(start=last + 1, end=s.length())
+    s[last + 1:].to_owned()
   }
 }
 
@@ -117,7 +117,7 @@ fn strip_edges(s : String) -> String {
   while end > start && is_trim_unit(s.unsafe_get(end - 1)) {
     end = end - 1
   }
-  s.substring(start=start, end=end)
+  s[start:end].to_owned()
 }
 
 ///|
@@ -129,15 +129,15 @@ pub fn normalize_slug(raw : String) -> String {
   let mut s = strip_edges(raw)
   // 去掉可能的协议前缀与域名前缀
   if s.has_prefix("https://github.com/") {
-    s = s.substring(start=19, end=s.length())
+    s = s[19:].to_owned()
   } else if s.has_prefix("http://github.com/") {
-    s = s.substring(start=18, end=s.length())
+    s = s[18:].to_owned()
   } else if s.has_prefix("github.com/") {
-    s = s.substring(start=11, end=s.length())
+    s = s[11:].to_owned()
   }
   // 去掉末尾的 ".git"（此时末尾已无空白与斜杠）
   if s.length() > 4 && s.has_suffix(".git") {
-    s = s.substring(start=0, end=s.length() - 4)
+    s = s[:s.length() - 4].to_owned()
   }
   // 协议剥离后可能又露出前后斜杠，再剥一次
   strip_edges(s)

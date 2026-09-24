@@ -23,6 +23,7 @@ param(
   [switch]$Test,
   [switch]$Clean,
   [string]$TargetDir = "",
+  [Parameter(ValueFromRemainingArguments = $true)]
   [string[]]$Run = @()
 )
 

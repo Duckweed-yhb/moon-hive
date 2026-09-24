@@ -59,10 +59,10 @@ pub fn escape(s : String) -> String {
 fn hex_digit(v : Int) -> Char {
   if v < 10 {
     // '0' = 0x30
-    Char::from_int(0x30 + v)
+    (0x30 + v).unsafe_to_char()
   } else {
     // 'a' = 0x61
-    Char::from_int(0x61 + v - 10)
+    (0x61 + v - 10).unsafe_to_char()
   }
 }
 

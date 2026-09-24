@@ -52,45 +52,65 @@ fn cmd_doctor() -> Unit {
 }
 
 ///|
-/// inspect 命令：moonhive inspect <owner/repo> [owner/repo ...]
+/// inspect 命令：moonhive inspect [--registry] <owner/repo> [owner/repo ...]
 fn cmd_inspect(args : Array[String]) -> Unit {
-  if args.length() == 0 {
-    println("用法: moonhive inspect <owner/repo> [owner/repo ...]")
+  let mut registry = false
+  let slugs : Array[String] = []
+  for a in args {
+    if a == "--registry" {
+      registry = true
+    } else {
+      slugs.push(a)
+    }
+  }
+  if slugs.length() == 0 {
+    println("用法: moonhive inspect [--registry] <owner/repo> [owner/repo ...]")
     println("")
     println("示例: moonhive inspect moonbit-community/yaml")
+    println("      moonhive inspect --registry moonbit-community/yaml")
     @proc.exit_with(14)
     return
   }
-  let (results, code) = @inspect.run(args, @inspect.default_options())
+  let opt = { ..@inspect.default_options(), registry }
+  let (results, code) = @inspect.run(slugs, opt)
   ignore(results)
   @proc.exit_with(code)
 }
 
 ///|
-/// survey 命令：moonhive survey [--out md] [--json f] [--site f] <候选>...
+/// survey 命令：moonhive survey [--out md] [--json f] [--site f] [--registry] <候选>...
 ///
 /// 候选可以是 owner/repo、HTTPS URL 或本地目录。
+/// 加 --registry 时，候选被当作 mooncakes 包名，用发布版本验证。
 /// 三种报告格式可同时输出，共用同一份数据模型。
 fn cmd_survey(args : Array[String]) -> Unit {
   if args.length() == 0 {
-    println("用法: moonhive survey [--out <md>] [--json <json>] [--site <html>] <候选>...")
+    println(
+      "用法: moonhive survey [--out <md>] [--json <json>] [--site <html>] [--registry] <候选>...",
+    )
     println("")
     println("候选可以是 owner/repo、https://github.com/owner/repo 或本地目录")
+    println("--registry: 候选是 mooncakes 包名，验证注册表发布版本")
     println(
       "示例: moonhive survey --out report.md --json report.json --site index.html moonbit-community/yaml",
     )
+    println("      moonhive survey --registry --json report.json moonbit-community/yaml")
     @proc.exit_with(14)
     return
   }
   let mut md_path = ""
   let mut json_path = ""
   let mut site_path = ""
+  let mut registry = false
   let candidates : Array[@gitsource.Candidate] = []
   let mut i = 0
   let bad : Array[String] = []
   while i < args.length() {
     let a = args[i]
-    if (a == "--out" || a == "--md") && i + 1 < args.length() {
+    if a == "--registry" {
+      registry = true
+      i = i + 1
+    } else if (a == "--out" || a == "--md") && i + 1 < args.length() {
       md_path = args[i + 1]
       i = i + 2
     } else if a == "--json" && i + 1 < args.length() {
@@ -100,16 +120,26 @@ fn cmd_survey(args : Array[String]) -> Unit {
       site_path = args[i + 1]
       i = i + 2
     } else if a.has_prefix("--out=") {
-      md_path = a.substring(start=6, end=a.length())
+      md_path = a[6:].to_owned()
       i = i + 1
     } else if a.has_prefix("--json=") {
-      json_path = a.substring(start=7, end=a.length())
+      json_path = a[7:].to_owned()
       i = i + 1
     } else if a.has_prefix("--site=") {
-      site_path = a.substring(start=7, end=a.length())
+      site_path = a[7:].to_owned()
       i = i + 1
     } else {
-      match @inspect.resolve_candidate(a) {
+      let res = if registry {
+        // registry 模式：候选是 mooncakes 包名，按 owner/repo 解析，
+        // 不走本地路径判断（避免同名目录劫持）
+        match @gitsource.from_slug(a) {
+          Ok(c) => Ok(c)
+          Err(_) => Err("不是合法的 mooncakes 包名（应为 owner/repo）")
+        }
+      } else {
+        @inspect.resolve_candidate(a)
+      }
+      match res {
         Ok(c) => candidates.push(c)
         Err(msg) => bad.push(a + "（" + msg + "）")
       }
@@ -131,6 +161,7 @@ fn cmd_survey(args : Array[String]) -> Unit {
     md_path,
     json_path,
     site_path,
+    registry,
   }
   let (_report, code) = @survey.run(candidates, opt)
   @proc.exit_with(code)
@@ -143,14 +174,15 @@ fn print_usage() -> Unit {
   println("用法: moonhive <命令> [参数...]")
   println("")
   println("命令:")
-  println("  survey [--out md] [--json f] [--site f] <候选>...")
+  println("  survey [--out md] [--json f] [--site f] [--registry] <候选>...")
   println("                                  批量普查并生成三种格式的报告")
-  println("  inspect <候选>...               体检指定仓库：拉下来用真实工具链验证")
+  println("  inspect [--registry] <候选>...  体检指定仓库：拉下来用真实工具链验证")
   println("  doctor                          检查运行环境（工具链 / git / TLS / 临时目录）")
   println("  version                         打印版本")
   println("  help                            打印本帮助")
   println("")
   println("候选写法: owner/repo | https://github.com/owner/repo | 本地目录路径")
+  println("--registry: 候选按 mooncakes 包名处理，验证注册表发布版本（moon fetch）")
   println("")
   println("结论说明:")
   println("  ✅ Verified            编译与测试通过，可以直接使用")

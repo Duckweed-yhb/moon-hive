@@ -25,6 +25,8 @@ pub(all) struct SurveyOptions {
   json_path : String
   /// 静态站 HTML 路径；空串表示不写
   site_path : String
+  /// 从注册表（mooncakes）验证发布版本，而非 git clone 默认分支
+  registry : Bool
 }
 
 ///|
@@ -37,6 +39,7 @@ pub fn default_options() -> SurveyOptions {
     md_path: "",
     json_path: "",
     site_path: "",
+    registry: false,
   }
 }
 
@@ -161,7 +164,17 @@ pub fn run(
     idx = idx + 1
     let tag = "[" + idx.to_string() + "/" + candidates.length().to_string() + "] "
     match
-      @check.verify_candidate(c, ws, backend, opt.target, opt.timeout_ms, opt.with_test) {
+      (if opt.registry {
+        @check.verify_registry_candidate(
+          c.slug,
+          ws,
+          opt.target,
+          opt.timeout_ms,
+          opt.with_test,
+        )
+      } else {
+        @check.verify_candidate(c, ws, backend, opt.target, opt.timeout_ms, opt.with_test)
+      }) {
       Ok(r) => {
         println(
           tag +

@@ -6,7 +6,7 @@
 
 ///|
 /// 体检命令的选项
-pub struct Options {
+pub(all) struct Options {
   /// 目标后端
   target : String
   /// 单条工具链命令的超时（毫秒）
@@ -15,12 +15,20 @@ pub struct Options {
   with_test : Bool
   /// 完成后是否保留工作区（便于人工排查）
   keep_workspace : Bool
+  /// 从注册表（mooncakes）验证发布版本，而非 git clone 默认分支
+  registry : Bool
 }
 
 ///|
 /// 默认选项
 pub fn default_options() -> Options {
-  { target: "native", timeout_ms: 120000, with_test: true, keep_workspace: false }
+  {
+    target: "native",
+    timeout_ms: 120000,
+    with_test: true,
+    keep_workspace: false,
+    registry: false,
+  }
 }
 
 ///|
@@ -87,6 +95,16 @@ pub fn resolve_candidate(raw : String) -> Result[@gitsource.Candidate, String] {
 }
 
 ///|
+/// 把 CandidateError 转成可读文本
+fn slug_error_text(e : @gitsource.CandidateError) -> String {
+  match e {
+    BadSlug(s) => "不是合法的 owner/repo 包名: " + s
+    BadUrl(s) => "不是受支持的 URL: " + s
+    BadLocalPath(s) => "本地路径不存在: " + s
+  }
+}
+
+///|
 /// 执行一次体检。
 ///
 /// 返回 (结果数组, 退出码)。退出码约定：
@@ -112,21 +130,41 @@ pub fn run(slugs : Array[String], opt : Options) -> (Array[@check.RevResult], In
   for raw in slugs {
     idx = idx + 1
     let tag = "[" + idx.to_string() + "/" + slugs.length().to_string() + "] "
-    match resolve_candidate(raw) {
+    match
+      (if opt.registry {
+        // registry 模式：候选是 mooncakes 包名，必须按 owner/repo 解析，
+        // 不走本地路径判断（避免同名目录劫持）
+        match @gitsource.from_slug(raw) {
+          Ok(c) => Ok(c)
+          Err(e) => Err(slug_error_text(e))
+        }
+      } else {
+        resolve_candidate(raw)
+      }) {
       Err(msg) => {
         println(tag + "跳过: " + raw + "（" + msg + "）")
         continue
       }
       Ok(c) => {
         match
-          @check.verify_candidate(
-            c,
-            ws,
-            backend,
-            opt.target,
-            opt.timeout_ms,
-            opt.with_test,
-          ) {
+          (if opt.registry {
+            @check.verify_registry_candidate(
+              c.slug,
+              ws,
+              opt.target,
+              opt.timeout_ms,
+              opt.with_test,
+            )
+          } else {
+            @check.verify_candidate(
+              c,
+              ws,
+              backend,
+              opt.target,
+              opt.timeout_ms,
+              opt.with_test,
+            )
+          }) {
           Ok(r) => {
             println(tag + render_result(r))
             results.push(r)
