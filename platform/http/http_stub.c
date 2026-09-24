@@ -48,6 +48,7 @@ typedef int(WSAAPI *fn_recv)(SOCKET, char *, int, int);
 typedef int(WSAAPI *fn_send)(SOCKET, const char *, int, int);
 typedef u_short(WSAAPI *fn_htons)(u_short);
 typedef u_long(WSAAPI *fn_htonl)(u_long);
+typedef int(WSAAPI *fn_setsockopt)(SOCKET, int, int, const char *, int);
 
 static fn_WSAStartup g_WSAStartup = NULL;
 static fn_WSACleanup g_WSACleanup = NULL;
@@ -60,6 +61,7 @@ static fn_recv g_recv = NULL;
 static fn_send g_send = NULL;
 static fn_htons g_htons = NULL;
 static fn_htonl g_htonl = NULL;
+static fn_setsockopt g_setsockopt = NULL;
 
 /* 一次性加载 ws2_32.dll 并解析全部符号。成功返回 0，失败返回 -1。 */
 static int http_ws_init(void) {
@@ -81,9 +83,11 @@ static int http_ws_init(void) {
   g_send = (fn_send)GetProcAddress(m, "send");
   g_htons = (fn_htons)GetProcAddress(m, "htons");
   g_htonl = (fn_htonl)GetProcAddress(m, "htonl");
+  g_setsockopt = (fn_setsockopt)GetProcAddress(m, "setsockopt");
   if (g_WSAStartup == NULL || g_socket == NULL || g_bind == NULL ||
       g_listen == NULL || g_accept == NULL || g_closesocket == NULL ||
-      g_recv == NULL || g_send == NULL || g_htons == NULL || g_htonl == NULL) {
+      g_recv == NULL || g_send == NULL || g_htons == NULL || g_htonl == NULL ||
+      g_setsockopt == NULL) {
     return -1;
   }
   return 0;
@@ -101,6 +105,7 @@ static int http_ws_init(void) {
 #define send g_send
 #define htons g_htons
 #define htonl g_htonl
+#define setsockopt g_setsockopt
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -734,6 +739,19 @@ int32_t http_serve(moonbit_string_t root_s, int32_t port) {
       free(root);
       return HTTP_ERR_ACCEPT;
     }
+    /* 半开连接防护：接收超时 5 秒。v1 单线程串行处理，若某个客户端
+       连上却不发送数据（浏览器预连接、TCP 半开等），阻塞 recv 会把
+       整个服务永久卡死，后续请求全部排队——表现为浏览器无限加载。
+       设置超时后，这种连接 5 秒被断开，服务自动恢复。 */
+#ifdef _WIN32
+    DWORD rcvto = 5000;
+    setsockopt(c, SOL_SOCKET, SO_RCVTIMEO, (const char *)&rcvto, sizeof(rcvto));
+#else
+    struct timeval rcvto;
+    rcvto.tv_sec = 5;
+    rcvto.tv_usec = 0;
+    setsockopt(c, SOL_SOCKET, SO_RCVTIMEO, &rcvto, sizeof(rcvto));
+#endif
     http_handle_client(c, root);
   }
 }
