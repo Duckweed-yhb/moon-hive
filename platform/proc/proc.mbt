@@ -137,8 +137,19 @@ pub fn join_path(dir : String, name : String) -> String {
   if ends_with_sep {
     dir + name
   } else {
-    dir + "\\" + name
+    dir + path_separator() + name
   }
+}
+
+/// 当前平台的路径分隔符：Windows 用反斜杠，Linux/macOS 及 Wasm/JS 用正斜杠
+#cfg(platform="windows")
+fn path_separator() -> String {
+  "\\"
+}
+
+#cfg(not(platform="windows"))
+fn path_separator() -> String {
+  "/"
 }
 
 // ---------- 公开 API ----------
