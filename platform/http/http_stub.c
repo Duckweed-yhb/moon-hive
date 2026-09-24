@@ -107,6 +107,7 @@ static int http_ws_init(void) {
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <wchar.h>
 #define closesocket(fd) close(fd)
 #define INVALID_SOCKET (-1)
 typedef int SOCKET;

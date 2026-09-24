@@ -272,7 +272,10 @@ fn contains_str(arr : Array[String], s : String) -> Bool {
 
 ///|
 fn test_base(tag : String) -> String {
-  let b = @proc.join_path(@proc.temp_dir(), "moonhive-ws-test-" + tag)
+  let b = @proc.join_path(
+    @proc.temp_dir(),
+    "moonhive-ws-test-" + tag + "-" + @env.now().to_string(),
+  )
   ignore(@fs.rm_rf(b))
   b
 }

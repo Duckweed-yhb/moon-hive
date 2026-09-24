@@ -196,7 +196,7 @@ pub fn remove_file(path : String) -> Bool {
 // 这些测试会真实读写临时目录。每个用例使用独立目录，避免相互干扰。
 
 ///|
-/// 在临时目录下准备一个唯一的测试目录路径
+/// 在临时目录下准备一个唯一的测试目录路径（毫秒时间戳保证唯一）
 fn test_dir(tag : String) -> String {
   let base = @proc.temp_dir()
   let stamp = @env.now()
@@ -204,9 +204,9 @@ fn test_dir(tag : String) -> String {
 }
 
 ///|
-/// 在指定目录下写一个文本文件（经由 shell，避免额外增加 C FFI 面）
+/// 在指定目录下写一个文本文件。直接走 fs 层（不依赖 shell，跨平台一致）
 fn write_file(path : String, content : String) -> Bool {
-  @proc.run_ok("echo " + content + " > \"" + path + "\"", "", 10000)
+  write_text(path, content)
 }
 
 test "mkdir_all 创建多级目录并可识别为目录" {
