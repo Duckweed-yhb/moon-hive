@@ -163,8 +163,16 @@ moon run cmd/moonhive --target native -- inspect --registry moonbit-community/ya
 moon run cmd/moonhive --target native -- inspect ./some-package
 
 # 把报告目录变成浏览器仪表盘（本地 HTTP，仅监听 127.0.0.1）
-moon run cmd/moonhive --target native -- serve --dir reports
-# 然后打开 http://127.0.0.1:8080/ ；--port 可换端口，--gen-only 只写入口不启动服务
+# 仓库路径含中文时请用 build.ps1（直接 moon run 会因汇编器无法处理中文路径而失败）：
+./build.ps1 -Run @("serve","--dir","reports","--port","9090")
+# 然后浏览器打开 http://127.0.0.1:9090/
+
+# 三个使用注意事项：
+#   1. 用 127.0.0.1 访问，不要用 localhost——服务只监听 IPv4 回环，
+#      而 Windows 上 localhost 会优先解析 IPv6 ::1，导致连不上
+#   2. 8080 是常用端口，常被其他软件占用——启动报"端口被占用"就换 --port
+#   3. build.ps1 的 -Run 传参数要以 - 开头的选项需用数组形式（@(...)），
+#      否则 PowerShell 会把 --dir 当成 build.ps1 自己的参数而报错
 ```
 
 ### 环境自检
