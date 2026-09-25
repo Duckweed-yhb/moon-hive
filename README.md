@@ -19,8 +19,9 @@ MoonHive 把候选项目真的拉到本地，在隔离工作区里用**真实的
 | 🚫 `ToolchainMismatch` | 诊断指向版本/API 不兼容——**不是包的错，是工具链版本差异** |
 | 📦 `MissingDependency` | 依赖解析失败，不是自包含的 |
 | 📄 `NoManifest` | 没有 `moon.mod`，不是 MoonBit 模块 |
-| ⏱️ `Timeout` | 超时 |
+| ⏱️ `TimedOut` | 超出时间预算 |
 | 🔒 `Unsafe` | 含 FFI / 构建脚本，只做静态分析 |
+| 🌐 `FetchFailed` | 获取仓库失败（网络 / 克隆 / 注册表拉取失败） |
 
 **为什么这件事必须由 MoonBit 来做**：判断"能不能真的用"需要握着工具链——要起子进程、要读编译器诊断、要管理真实工作区。这不是大模型对话能替代的，也不是 GitHub 搜索能给出的。
 
