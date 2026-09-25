@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MoonHive 生态验证报告</title>
+<style>
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:960px;margin:0 auto;padding:24px;line-height:1.6;color:#1a1a1a;background:#fff}
+h1{font-size:1.6rem;margin:0 0 4px}
+h2{font-size:1.15rem;margin:28px 0 10px;border-bottom:1px solid #e5e5e5;padding-bottom:6px}
+.sub{color:#666;font-size:.9rem;margin-bottom:20px}
+.env{background:#f7f7f8;border:1px solid #e5e5e5;border-radius:6px;padding:12px 16px;margin:16px 0;font-size:.9rem}
+.env div{margin:2px 0}
+.env code{background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #e5e5e5}
+.stats{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+.stat{border:1px solid #e5e5e5;border-radius:6px;padding:10px 16px;min-width:96px}
+.stat .n{font-size:1.4rem;font-weight:600}
+.stat .l{font-size:.8rem;color:#666}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top}
+th{background:#fafafa;font-weight:600}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.85em}
+.ev{color:#666;font-size:.85em;word-break:break-all}
+.ok{color:#1a7f37}.warn{color:#9a6700}.bad{color:#cf222e}
+footer{margin-top:32px;padding-top:12px;border-top:1px solid #e5e5e5;color:#666;font-size:.85rem}
+</style>
+</head>
+<body>
+<h1>MoonHive 生态验证报告</h1>
+<div class="sub">用真实 MoonBit 工具链逐个验证：能不能编译、测试过不过、失败属于哪一类。</div>
+<div class="env">
+  <div><strong>验证环境</strong>（结论只在此环境下成立）</div>
+  <div>MoonBit 工具链：<code>moon 0.1.20260904 (94521db 2026-09-04)</code></div>
+  <div>目标后端：<code>native</code></div>
+  <div>生成时间戳（毫秒）：<code>1790306544680</code></div>
+</div>
+<div class="stats">
+  <div class="stat"><div class="n">18</div><div class="l">验证总数</div></div>
+  <div class="stat"><div class="n">2</div><div class="l">可直接使用</div></div>
+  <div class="stat"><div class="n">11.1%</div><div class="l">可用率</div></div>
+  <div class="stat"><div class="n">324452</div><div class="l">源码总行数</div></div>
+</div>
+<h2>结论分布</h2>
+<table>
+<thead><tr><th>结论</th><th>数量</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td class="ok"><code>Verified</code></td><td>2</td><td>编译与测试通过，可以直接使用</td></tr>
+<tr><td class="warn"><code>TestFailing</code></td><td>1</td><td>能编译，但测试未通过——代码在演进中，谨慎使用</td></tr>
+<tr><td class="bad"><code>DoesNotCompile</code></td><td>3</td><td>编译器报错，当前工具链上不可用</td></tr>
+<tr><td class="warn"><code>ToolchainMismatch</code></td><td>2</td><td>版本/API 不兼容——不是包的问题，是工具链版本差异</td></tr>
+<tr><td class="bad"><code>NoManifest</code></td><td>3</td><td>没有 moon.mod，不是 MoonBit 模块</td></tr>
+<tr><td class="bad"><code>Unsafe</code></td><td>7</td><td>含 FFI 或自定义构建脚本，出于安全只做静态分析</td></tr>
+</tbody>
+</table>
+<h2>逐个结果</h2>
+<table>
+<thead><tr><th>项目</th><th>结论</th><th>规模</th><th>耗时</th><th>证据</th></tr></thead>
+<tbody>
+<tr><td><code>moonbitlang/x</code></td><td class="bad">🔒 <code>Unsafe</code></td><td>133 文件 / 29082 行</td><td>check 0ms</td><td>—</td></tr>
+<tr><td><code>moonbitlang/async</code></td><td class="bad">🔒 <code>Unsafe</code></td><td>362 文件 / 50379 行</td><td>check 0ms</td><td>—</td></tr>
+<tr><td><code>moonbitlang/quickcheck</code></td><td class="bad">📄 <code>NoManifest</code></td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>moonbitlang/parser</code></td><td class="bad">🔒 <code>Unsafe</code></td><td>127 文件 / 142235 行</td><td>check 0ms</td><td>—</td></tr>
+<tr><td><code>mizchi/x</code></td><td class="bad">🔒 <code>Unsafe</code></td><td>133 文件 / 23391 行</td><td>check 0ms</td><td>—</td></tr>
+<tr><td><code>mizchi/zlib</code></td><td class="bad">🔒 <code>Unsafe</code></td><td>20 文件 / 3243 行</td><td>check 0ms</td><td>—</td></tr>
+<tr><td><code>mizchi/tempfile</code></td><td class="bad">📄 <code>NoManifest</code></td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>mizchi/llm</code></td><td class="bad">🔒 <code>Unsafe</code></td><td>63 文件 / 8055 行</td><td>check 0ms</td><td>—</td></tr>
+<tr><td><code>bobzhang/lexer</code></td><td class="ok">✅ <code>Verified</code></td><td>1 文件 / 276 行</td><td>check 381ms / test 4.6s</td><td>—</td></tr>
+<tr><td><code>bobzhang/toml</code></td><td class="warn">⚠️ <code>TestFailing</code></td><td>36 文件 / 14813 行</td><td>check 2.5s / test 19.0s</td><td class="ev">C:\Users\yhb\AppData\Local\Temp\moonhive-workspaces\moonhive-workspace-1790306397431\bobzhang__toml\.repos\bobzhang\toml\0.4.3\.mooncakes\moonbitlang\async\src\…</td></tr>
+<tr><td><code>moonbitlang/yacc</code></td><td class="bad">❌ <code>DoesNotCompile</code></td><td>75 文件 / 19453 行</td><td>check 5.3s</td><td class="ev">Downloading moonbitlang/ulex-runtime@0.4.3</td></tr>
+<tr><td><code>moonbit-community/yaml</code></td><td class="ok">✅ <code>Verified</code></td><td>11 文件 / 6227 行</td><td>check 433ms / test 9.3s</td><td>—</td></tr>
+<tr><td><code>q2316367743/moonhttp</code></td><td class="warn">🚫 <code>ToolchainMismatch</code></td><td>64 文件 / 12280 行</td><td>check 5.1s</td><td class="ev">159         eprintln(&quot;fatal runtime error: \{err}&quot;)（特征: has no method）</td></tr>
+<tr><td><code>JingLan0v0/jmespath</code></td><td class="warn">🚫 <code>ToolchainMismatch</code></td><td>15 文件 / 1928 行</td><td>check 168ms / test 157ms</td><td class="ev">仓库声明的目标后端为 [js]，不含本次使用的 native</td></tr>
+<tr><td><code>sundaysebasidian-byte/moon-loglens</code></td><td class="bad">❌ <code>DoesNotCompile</code></td><td>3 文件 / 817 行</td><td>check 1.1s</td><td class="ev">A bug report containing the error description and relevant code would be</td></tr>
+<tr><td><code>sgy1023-crt/MoonCheck</code></td><td class="bad">❌ <code>DoesNotCompile</code></td><td>12 文件 / 1520 行</td><td>check 6.3s</td><td class="ev">A bug report containing the error description and relevant code would be</td></tr>
+<tr><td><code>HhWw96/moonmmdb</code></td><td class="bad">🔒 <code>Unsafe</code></td><td>62 文件 / 10753 行</td><td>check 0ms</td><td>—</td></tr>
+<tr><td><code>mizchi/duckdb</code></td><td class="bad">📄 <code>NoManifest</code></td><td>—</td><td>—</td><td>—</td></tr>
+</tbody>
+</table>
+<footer>
+由 <code>moonhive survey</code> 生成 · 源码：<a href="https://github.com/Duckweed-yhb/moon-hive">Duckweed-yhb/moon-hive</a> · MIT
+</footer>
+</body>
+</html>

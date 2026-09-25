@@ -8,11 +8,10 @@ _build/
 favorites.json
 favorites.md
 
-# Survey reports (runtime output, regenerable)
-reports/
+# Survey reports: committed as real verification evidence for review
+# (was ignored in v1 as runtime output; now part of the deliverable)
 
-# Personal application materials (contains private info)
-申报书*.md
+# Personal application reference image (not for public repo)
 _申报书参考.png
 
 # Competition prep notes (internal, not for public repo)

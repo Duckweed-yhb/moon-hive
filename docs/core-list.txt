@@ -1,0 +1,44 @@
+# MoonHive 核心验证清单（core list）
+#
+# 来源：mooncakes.io 真实生态数据（2026-09-25 抓取）
+#   官方 pinned：moonbitlang/core, moonbitlang/async, moonbitlang/x
+#   Most downloaded：mizchi/x, mizchi/zlib, moonbitlang/quickcheck,
+#   moonbitlang/parser, bobzhang/lexer, bobzhang/toml, moonbitlang/yacc ...
+#   活跃新包：q2316367743/moonhttp, JingLan0v0/jmespath, moon-loglens ...
+#
+# 用途：moonhive survey --registry 批量验证这些包的注册表发布版本
+#   （用户 moon add 真正会装到的那个版本）。
+# 用法：每行一个 mooncakes 包名（owner/name），# 开头为注释。
+#
+# 覆盖意图：
+#   官方扩展（验证官方生态自身）、热门工具库（验证使用最广的包）、
+#   活跃新包（验证最新生态）、CLI 工具（验证同形态项目）、
+#   FFI 绑定（验证会被归类为 Unsafe 的包）。
+
+# --- 官方 pinned / 官方扩展 ---
+moonbitlang/x
+moonbitlang/async
+moonbitlang/quickcheck
+moonbitlang/parser
+
+# --- 热门工具库（Most downloaded）---
+mizchi/x
+mizchi/zlib
+mizchi/tempfile
+mizchi/llm
+bobzhang/lexer
+bobzhang/toml
+moonbitlang/yacc
+
+# --- 常用社区包 ---
+moonbit-community/yaml
+
+# --- 活跃新包（2026-09 最近更新/发布）---
+q2316367743/moonhttp
+JingLan0v0/jmespath
+sundaysebasidian-byte/moon-loglens
+sgy1023-crt/MoonCheck
+
+# --- FFI 绑定（预期 Unsafe / 或构建相关）---
+HhWw96/moonmmdb
+mizchi/duckdb

@@ -24,6 +24,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <direct.h>
+#include <wchar.h>
 #define MKDIR(p) _mkdir(p)
 #define RMDIR(p) _rmdir(p)
 #else
@@ -370,9 +371,27 @@ moonbit_string_t fs_read_text(moonbit_string_t path) {
 
 /* 把 MoonBit 字符串按 UTF-8 编码写入文件（覆盖写）。成功返回 0。 */
 int32_t fs_write_text(moonbit_string_t path, moonbit_string_t content) {
+#ifdef _WIN32
+  /* Windows：仓库可能位于中文路径（如 E:\future\yhb\03-竞赛\...）。A 版
+     fopen 的路径经 fs_str_to_ascii 转换后，中文被替换成 '?'，写文件必然失败。
+     MoonBit String 的内存是 UTF-16（uint16_t 数组），Windows wchar_t 同为
+     UTF-16——直接逐单元拷贝即可，无需编码转换。 */
+  int32_t pn = (int32_t)Moonbit_array_length(path);
+  wchar_t *wp = (wchar_t *)malloc(((size_t)pn + 1) * sizeof(wchar_t));
+  if (wp == NULL) {
+    return -1;
+  }
+  for (int32_t i = 0; i < pn; i++) {
+    wp[i] = (wchar_t)path[i];
+  }
+  wp[pn] = 0;
+  FILE *f = _wfopen(wp, L"wb");
+  free(wp);
+#else
   char p[FS_MAX_PATH];
   fs_str_to_ascii(path, p, (int32_t)sizeof(p));
   FILE *f = fopen(p, "wb");
+#endif
   if (f == NULL) {
     return -1;
   }

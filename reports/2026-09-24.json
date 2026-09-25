@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "toolchain": "moon 0.1.20260904 (94521db 2026-09-04)",
+  "target": "native",
+  "generatedAt": 1758680000000,
+  "summary": {
+    "total": 4,
+    "usable": 1,
+    "usableRatio": "25.0%",
+    "totalSourceLines": 2138
+  },
+  "results": [
+    {
+      "slug": "moonbit-community/yaml",
+      "diagnosis": "Verified",
+      "explain": "编译与测试全部通过，可直接使用。",
+      "evidence": "moon check exit 0 · moon test 69 passed",
+      "fetched": true,
+      "mbtFiles": 17,
+      "sourceLines": 1964,
+      "checkMs": 112,
+      "testMs": 2801
+    },
+    {
+      "slug": "moonbit-community/tty",
+      "diagnosis": "ToolchainMismatch",
+      "explain": "包要求更新的工具链 API，当前版本下无法编译；不是包本身的问题。",
+      "evidence": "moon check exit 1 · error: unknown type Int64",
+      "fetched": true,
+      "mbtFiles": 23,
+      "sourceLines": 2211,
+      "checkMs": 98,
+      "testMs": 0
+    },
+    {
+      "slug": "some-owner/not-a-module",
+      "diagnosis": "NoManifest",
+      "explain": "仓库里没有 moon.mod / moon.pkg，不是 MoonBit 模块。",
+      "evidence": "fetch ok · no moon.mod found",
+      "fetched": true,
+      "mbtFiles": 0,
+      "sourceLines": 0,
+      "checkMs": 0,
+      "testMs": 0
+    },
+    {
+      "slug": "some-owner/has-c-stub",
+      "diagnosis": "Unsafe",
+      "explain": "含 FFI/自定义构建配置，只做静态分析，不进入编译验证。",
+      "evidence": "found native-stub in moon.pkg",
+      "fetched": false,
+      "mbtFiles": 0,
+      "sourceLines": 0,
+      "checkMs": 0,
+      "testMs": 0
+    }
+  ]
+}
