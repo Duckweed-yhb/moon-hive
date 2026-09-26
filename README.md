@@ -96,6 +96,21 @@ git TLS 后端: openssl（系统默认后端不可用，已按命令显式指定
   Verified: 1   DoesNotCompile: 1   NoManifest: 1   Unsafe: 1
 ```
 
+### 首批真实生态验证（2026-09-25）
+
+对 mooncakes 上的 **18 个真实包**做了首次批量普查（完整结果见 [网页版报告](https://Duckweed-yhb.github.io/moon-hive/) 或 `reports/2026-09-25.md`）：
+
+| 结论 | 数量 | 代表包 |
+|---|---|---|
+| ✅ Verified | 2 | `bobzhang/lexer`、`moonbit-community/yaml` |
+| ⚠️ TestFailing | 1 | `bobzhang/toml` |
+| ❌ DoesNotCompile | 3 | `moonbitlang/yacc`、`moon-loglens`、`MoonCheck` |
+| 🚫 ToolchainMismatch | 2 | `moonhttp`、`jmespath` |
+| 📄 NoManifest | 3 | `quickcheck`、`tempfile`、`duckdb` |
+| 🔒 Unsafe | 7 | `x`、`async`、`parser`、`zlib`、`llm`、`moonmmdb` 等 |
+
+**可用率 11.1%**——18 个包里只有 2 个开箱即用。这不是"生态很差"的结论，而是"能不能用需要实测"的直接证据：star 数、README、搜索引擎都不会告诉你 `moonbitlang/yacc` 在当前工具链上编译不过——MoonHive 会。
+
 ### 输入形式
 
 `inspect` / `survey` 接受三种写法：
