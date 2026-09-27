@@ -1,0 +1,3 @@
+///|
+/// 01 Hello, MoonBit! — 可执行示例
+pkgtype(kind: "executable")
