@@ -96,9 +96,9 @@ git TLS 后端: openssl（系统默认后端不可用，已按命令显式指定
   Verified: 1   DoesNotCompile: 1   NoManifest: 1   Unsafe: 1
 ```
 
-### 真实生态验证（2026-09-26）
+### 真实生态验证（2026-09-27）
 
-对 mooncakes 上的 **18 个真实包**做了批量普查（完整结果见 [网页版报告](https://Duckweed-yhb.github.io/moon-hive/) 或 `reports/2026-09-26.md`）：
+对 mooncakes 上的 **18 个真实包**做了批量普查（完整结果见 [网页版报告](https://Duckweed-yhb.github.io/moon-hive/) 或 `reports/2026-09-27.md`）：
 
 | 结论 | 数量 | 代表包 |
 |---|---|---|

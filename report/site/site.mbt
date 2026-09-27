@@ -275,7 +275,7 @@ fn render_rows(m : @model.ReportModel) -> String {
       class_of(r.diagnosis) +
       "\">" +
       @model.mark_of(r.diagnosis) +
-      " <code>" +
+      " <code class=\"b\">" +
       escape_html(r.diagnosis) +
       "</code></td>",
     )
