@@ -1,11 +1,25 @@
 # MoonHive
 
-> **MoonBit 生态验证引擎** —— 用真实工具链验证生态中的包能不能真的用。
+> **MoonBit 生态验证引擎 + 学习平台** —— 一个仓库，三条路：验证生态里的包能不能用、用示例查 MoonBit、按天系统学 MoonBit。
 
 [![CI](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml/badge.svg)](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## 这个项目解决什么问题
+## 这个仓库的三条路
+
+| 方向 | 是什么 | 状态 | 入口 |
+|---|---|---|---|
+| 🔍 **生态验证引擎** | 用真实 MoonBit 工具链验证生态包能否编译、测试是否通过，失败归为九类可行动结论 | ✅ 完成 · 124 测试全绿 | [下文](#方向一--生态验证引擎主线) · [网页版报告](https://Duckweed-yhb.github.io/moon-hive/) |
+| 📚 **MoonBit by Example** | go-by-example 风格主题示例库：代码 + 真实输出 + 要点，按需查字典 | 🚧 建设中 · Day 01–05 已实测 | [examples/](examples/README.md) |
+| 🗓️ **100 Days of MoonBit** | python-100-days 风格每日教程：概念引入 → 分节讲解 → 练习 → 小结 | 🚧 建设中 · Day 01–02 | [100days/](100days/README.md) |
+
+三条路共享同一套实测过的 MoonBit 示例，由验证引擎（`build.ps1 -Examples`）逐个编译运行，保证示例输出真实可信。
+
+## 方向一 · 生态验证引擎（主线）
+
+验证引擎是 MoonHive 的核心：把候选 MoonBit 包拉进隔离工作区，用真实工具链验证，把结果归类成可行动的结论。18 个真实包的普查报告见[网页版](https://Duckweed-yhb.github.io/moon-hive/)。
+
+### 这个项目解决什么问题
 
 想要用 MoonBit 生态里的某个包时，你通常只能看到它的名字和 star 数。**但 star 数不告诉你它能不能编译、测试过没过、依赖重不重、在你这套工具链上能不能跑。**
 
@@ -249,9 +263,17 @@ features/*              命令实现（survey / inspect / doctor / serve）
 3. 设超时上限与磁盘配额
 4. 含 FFI 或自定义构建脚本的仓库**只做静态分析**，不执行
 
-## MoonBit by Example（建设中）
+## 方向二 · MoonBit by Example（学习库 · 主题线）
 
-验证引擎的延伸：**示例驱动**的 MoonBit 学习资源，每个示例 = 可运行代码 + 真实输出 + 要点讲解，由 MoonHive 逐个用真实工具链编译运行，标注 ✅ 实测标记（不是手打的输出）。提供两种学习入口——按主题查的 [By Example](examples/README.md)，与按天推进的 [100 Days](100days/README.md)。目前已完成基础阶段 Day 01–05（hello / variables / types / functions / control），目标覆盖基础 → 进阶 → 实战共 25 个示例。
+go-by-example 风格的**主题示例库**：每个示例一页——可运行代码 + 真实输出 + 要点讲解，适合按需查阅（想学 match，直接打开 match 示例）。每个示例由验证引擎用真实工具链编译运行，标注 ✅ 实测标记（不是手打的输出），`./build.ps1 -Examples` 可一键复验。
+
+当前进度：Day 01–05（hello / variables / types / functions / control）全部实测通过，目标覆盖基础 → 进阶 → 实战共 25 个主题。入口：[examples/README.md](examples/README.md)。
+
+## 方向三 · 100 Days of MoonBit（学习库 · 天路线）
+
+python-100-days 风格的**每日教程**：每天一篇完整文章——概念引入、代码分段讲解、Windows 常见坑、动手练习、今日小结、自我检查，适合从头系统学、靠节奏坚持。与 By Example 共享同一批实测示例，只是换了"怎么学"的视角。
+
+当前进度：Day 01–02（初识 MoonBit / 变量与绑定），后续随示例推进。入口：[100days/README.md](100days/README.md)。
 
 ## 未来方向
 
