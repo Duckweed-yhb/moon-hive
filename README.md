@@ -148,6 +148,7 @@ $ moonhive inspect --registry moonbit-community/yaml
 ```powershell
 ./build.ps1              # 构建
 ./build.ps1 -Test        # 构建 + 测试
+./build.ps1 -Examples    # 验证 examples/ 全部示例（编译运行 + 比对 expected.txt）
 ./build.ps1 -Run doctor  # 构建 + 运行 moonhive doctor
 ```
 
