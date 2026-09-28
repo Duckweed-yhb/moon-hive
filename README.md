@@ -248,11 +248,15 @@ features/*              命令实现（survey / inspect / doctor / serve）
 3. 设超时上限与磁盘配额
 4. 含 FFI 或自定义构建脚本的仓库**只做静态分析**，不执行
 
+## MoonBit by Example（建设中）
+
+验证引擎的延伸：**示例驱动**的 MoonBit 学习资源，每个示例 = 可运行代码 + 真实输出 + 要点讲解，由 MoonHive 逐个用真实工具链编译运行，标注 ✅ 实测标记（不是手打的输出）。提供两种学习入口——按主题查的 [By Example](examples/README.md)，与按天推进的 [100 Days](100days/README.md)。目前已完成基础阶段 Day 01–05（hello / variables / types / functions / control），目标覆盖基础 → 进阶 → 实战共 25 个示例。
+
 ## 未来方向
 
 - **多工具链对比**：同一包在不同 moon 版本上验证，区分"包坏了"与"工具链演进"
 - **趋势追踪**：定时运行 survey，追踪生态包可用性的变化
-- **MoonBit by Example**：基于验证引擎构建示例驱动的学习资源——每个示例经真实工具链编译运行验证、带实测标记，填补 MoonBit 生态的示例学习空白
+- **示例自动化体检**：把 examples/ 的每个示例接入验证引擎，发布站点时自动标注实测结果
 
 ## 许可证
 

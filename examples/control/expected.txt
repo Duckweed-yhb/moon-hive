@@ -1,0 +1,3 @@
+score = 85, grade = B
+day = Mon, 中文 = 周一
+sum(0..<5) = 10
