@@ -5,9 +5,21 @@
 [![CI](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml/badge.svg)](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+## 目录
+
+- [MoonHive 做什么](#moonhive-做什么)
+- [现在做到哪了](#现在做到哪了)
+- [怎么用](#怎么用)
+- [架构](#架构)
+- [安全](#安全)
+- [已知限制](#已知限制)
+- [学习资源](#学习资源)
+- [未来方向](#未来方向)
+- [许可证](#许可证)
+
 ## MoonHive 做什么
 
-想要用生态里某个包时，能看到的多半是名字和 star 数。star 数不告诉你它能不能编译、测试过没过、依赖重不重、在你那套工具链上能不能跑。
+给打算在 MoonBit 项目里用生态包的人。想用某个包时，能看到的多半是名字和 star 数。star 数不告诉你它能不能编译、测试过没过、依赖重不重、在你那套工具链上能不能跑。
 
 MoonHive 把候选项目拉到本地，在隔离工作区里用真实工具链检它们，把结论分成九类：
 
@@ -234,6 +246,13 @@ features/*              命令实现（survey / inspect / doctor / serve）
 2. 所有验证在一次性临时工作区内进行，结束后可一键清理
 3. 设超时上限与磁盘配额
 4. 含 FFI 或自定义构建脚本的仓库只做静态分析，不执行
+
+## 已知限制
+
+- 仅支持 native 后端：C FFI 不支持 wasm，本工具是本地 CLI，不需要在浏览器里跑
+- Windows 下项目路径含中文时，直接 `moon build/run` 会因汇编器无法处理中文路径而失败，用 `build.ps1`（自动把产物重定向到纯 ASCII 临时目录）
+- 远端克隆依赖本机 git 的 TLS 后端可用，`moonhive doctor` 能检测并给出修复命令
+- 本地仪表盘只监听 127.0.0.1，访问要用 `127.0.0.1` 而不是 `localhost`（Windows 上 localhost 会优先解析 IPv6）
 
 ## 学习资源
 
