@@ -247,6 +247,8 @@ features/*              命令实现（survey / inspect / doctor / serve）
 
 **为什么用 C FFI**：`moonbitlang/core` 不提供文件系统与进程模块（它们只在第三方的 `moonbitlang/async` 中）。本项目的核心能力，起进程跑工具链、读编译器诊断，必须依赖它们，因此自建 FFI 层而不是引入第三方包。
 
+按行数，业务逻辑 100% 是 MoonBit：`verify/*`、`features/*`、`report/*`、`core/*` 共约 4,970 行 MoonBit；约 1,740 行 C 代码全部集中在 `platform/` 三个 FFI 适配文件里，只负责把 MoonBit 调用接到底层系统，不含任何业务判断。
+
 **仪表盘的网络层**：`platform/http` 是零第三方依赖的静态服务器，只监听回环地址、只允许 GET、拒绝路径穿越（`..`）。Windows 上 winsock 通过 `LoadLibrary("ws2_32.dll")` 在运行时加载，不参与静态链接（moon 的 `cc-link-flags` 不进入可执行链接）。
 
 **为什么只在 native 后端构建**：C FFI 不支持 wasm 后端。这是有意的架构选择，本工具是本地 CLI，不需要在浏览器或 wasm 运行时里跑。
