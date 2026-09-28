@@ -298,7 +298,7 @@ python-100-days 风格的每日教程：每天一篇完整文章，概念引入�
 - [网页版验证报告](https://Duckweed-yhb.github.io/moon-hive/) — 18 个真实包的三轮普查结果
 - [By Example 示例库](examples/README.md) — 按主题查
 - [100 Days 教程](100days/README.md) — 按天系统学
-- [贡献指南](CONTRIBUTING.md) · [路线图](ROADMAP.md)
+- [贡献指南](CONTRIBUTING.md) · [路线图](ROADMAP.md) · [变更日志](CHANGELOG.md)
 
 ## 许可证
 
