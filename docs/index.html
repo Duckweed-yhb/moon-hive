@@ -5,97 +5,143 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MoonHive 生态验证报告</title>
 <style>
-body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:960px;margin:0 auto;padding:20px 20px 32px;line-height:1.6;color:#1a1a1a;background:#fff}
-h1{font-size:1.7rem;margin:0 0 4px}
-.sub{color:#666;font-size:.92rem;margin-bottom:16px}
-nav{font-size:.85rem;color:#57606a;margin:0 0 16px}
-nav a{color:#0969da;text-decoration:none;margin-right:12px}
-.hero{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;background:linear-gradient(135deg,#f6f8fa,#eef1f4);border:1px solid #e5e5e5;border-radius:10px;padding:16px 20px;margin:14px 0 6px}
-.hero .n{font-size:2.2rem;font-weight:700;color:#1a7f37;line-height:1}
-.hero .t{font-size:1rem;color:#24292f}
-.hero .s{flex-basis:100%;font-size:.85rem;color:#57606a}
-.env{background:#f7f7f8;border:1px solid #e5e5e5;border-radius:8px;padding:12px 16px;margin:12px 0 6px;font-size:.9rem}
-.env div{margin:2px 0}
-.env code{background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #e5e5e5}
-.stats{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0 4px}
-.stat{flex:1 1 130px;min-width:0;border:1px solid #e5e5e5;border-radius:10px;padding:12px 16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
-.stat .n{font-size:1.5rem;font-weight:600}
-.stat .l{font-size:.8rem;color:#666}
-h2{font-size:1.2rem;margin:30px 0 12px;border-bottom:1px solid #e5e5e5;padding-bottom:8px;scroll-margin-top:8px}
-table{border-collapse:collapse;width:100%;font-size:.9rem}
-th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #eee;vertical-align:top}
-th{background:#fafafa;font-weight:600}
-code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.85em}
-.ev{color:#57606a;font-size:.83em;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-break:keep-all}
-.bar{background:#eef1f4;border-radius:5px;height:8px;min-width:80px;overflow:hidden}
-.fill{height:100%;border-radius:5px}
-.tbl-wrap{overflow-x:auto}
-.ok{color:#1a7f37}.warn{color:#9a6700}.bad{color:#cf222e}
-.c-verified{color:#1a7f37}.c-testfailing{color:#9a6700}.c-toolchainmismatch{color:#9a6700}.c-missingdependency{color:#bc4c00}.c-doesnotcompile{color:#cf222e}.c-nomanifest{color:#bc4c00}.c-timedout{color:#57606a}.c-unsafe{color:#8250df}.c-fetchfailed{color:#57606a}
-.fill-verified{background:#1a7f37}.fill-testfailing{background:#d4a72c}.fill-toolchainmismatch{background:#d4a72c}.fill-missingdependency{background:#bc4c00}.fill-doesnotcompile{background:#cf222e}.fill-nomanifest{background:#bc4c00}.fill-timedout{background:#8b949e}.fill-unsafe{background:#8250df}.fill-fetchfailed{background:#8b949e}
-footer{margin-top:36px;padding-top:12px;border-top:1px solid #e5e5e5;color:#666;font-size:.85rem}
-@media(max-width:600px){h1{font-size:1.4rem}.hero .n{font-size:1.8rem}th,td{padding:7px 6px;font-size:.82rem}.stat{flex-basis:calc(50% - 12px)}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;line-height:1.6;color:#1f2328;background:#f6f7f9;font-size:15px}
+.wrap{max-width:920px;margin:0 auto;padding:0 20px 48px}
+
+/* hero */
+.hero{background:linear-gradient(135deg,#1e1b4b 0%,#4c1d95 55%,#6d28d9 100%);color:#fff;border-radius:16px;padding:36px 32px;margin:24px 0 20px}
+.hero h1{font-size:1.5rem;font-weight:700;margin-bottom:6px}
+.hero .sub{color:#c4b5fd;font-size:.95rem;margin-bottom:24px}
+.hero .big{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.hero .n{font-size:3.4rem;font-weight:800;line-height:1}
+.hero .of{font-size:1.3rem;color:#c4b5fd}
+.hero .lbl{font-size:1.05rem;margin-left:8px}
+.hero .note{margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.18);font-size:.88rem;color:#ddd6fe}
+
+/* 可用包卡片 */
+.section-title{font-size:1.15rem;font-weight:700;margin:28px 0 12px;display:flex;align-items:center;gap:8px}
+.ok-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.ok-card{background:#fff;border:1px solid #d1fae5;border-left:4px solid #22c55e;border-radius:10px;padding:14px 16px}
+.ok-card .name{font-family:ui-monospace,Consolas,monospace;font-weight:600;color:#166534;font-size:.95rem}
+.ok-card .meta{font-size:.82rem;color:#4b5563;margin-top:6px}
+.ok-card .pill{display:inline-block;background:#dcfce7;color:#166534;font-size:.75rem;padding:2px 8px;border-radius:99px;margin-top:8px}
+
+/* 失败分布堆叠条 */
+.dist{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin-top:8px}
+.stack{display:flex;height:32px;border-radius:8px;overflow:hidden;margin:10px 0 14px}
+.seg{display:flex;align-items:center;justify-content:center;color:#fff;font-size:.78rem;font-weight:600;min-width:0}
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:.84rem}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* 明细表 */
+.tbl-wrap{overflow-x:auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{background:#f9fafb;text-align:left;padding:11px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid #f0f0f1;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+td.pkg{font-family:ui-monospace,Consolas,monospace;font-size:.86rem}
+.tag{display:inline-block;font-size:.76rem;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap}
+.t-verified{background:#dcfce7;color:#166534}
+.t-testfailing{background:#fef9c3;color:#854d0e}
+.t-toolchainmismatch{background:#fef3c7;color:#92400e}
+.t-missingdependency{background:#ffedd5;color:#9a3412}
+.t-doesnotcompile{background:#fee2e2;color:#991b1b}
+.t-nomanifest{background:#ffedd5;color:#9a3412}
+.t-timedout{background:#f3f4f6;color:#4b5563}
+.t-unsafe{background:#f3e8ff;color:#6b21a8}
+.t-fetchfailed{background:#f3f4f6;color:#4b5563}
+.scale{color:#6b7280;font-size:.82rem;white-space:nowrap}
+
+/* 页脚 */
+footer{margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:.84rem;line-height:1.8}
+footer code{font-family:ui-monospace,Consolas,monospace;background:#eef0f3;padding:1px 6px;border-radius:4px;font-size:.85em}
+a{color:#6d28d9;text-decoration:none}
+a:hover{text-decoration:underline}
+@media(max-width:600px){.hero{padding:26px 20px}.hero .n{font-size:2.4rem}.ok-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<h1>MoonHive 生态验证报告</h1>
-<div class="sub">用真实 MoonBit 工具链逐个验证：能不能编译、测试过不过、失败属于哪一类。</div>
-<nav><a href="#summary">结论分布</a><a href="#details">逐个结果</a></nav>
+<div class="wrap">
+
 <div class="hero">
-  <div class="n">16.7%</div>
-  <div class="t">可用率 —— 3 / 18 个包开箱即用</div>
-  <div class="s">其余 15 个包的失败原因各不相同（编译不过 / 工具链版本不匹配 / 非模块 / 含 FFI 等），见下方结论分布与逐条明细。</div>
+  <h1>MoonHive 生态验证报告</h1>
+  <div class="sub">用真实 MoonBit 工具链逐个验证：能不能编译、测试过不过、失败属于哪一类。</div>
+  <div class="big">
+    <div class="n">3<span class="of"> / 18</span></div>
+    <div class="lbl">个包可以直接拉来用</div>
+  </div>
+  <div class="note">其余 15 个包里，3 个编译不过、2 个是工具链版本不匹配（不是包的错）、3 个根本不是 MoonBit 模块、7 个含 FFI 出于安全只做静态检查。结论只在下方验证环境下成立。</div>
 </div>
-<div class="env">
-  <div><strong>验证环境</strong>（结论只在此环境下成立）</div>
-  <div>MoonBit 工具链：<code>moon 0.1.20260904 (94521db 2026-09-04)</code></div>
-  <div>目标后端：<code>native</code></div>
-  <div>生成时间：<code>2026-09-27 10:47:09</code>（UTC+8）</div>
-  <div>生成时间戳（毫秒）：<code>1790477229138</code></div>
+
+<div class="section-title">✅ 可以直接用</div>
+<div class="ok-grid">
+  <div class="ok-card">
+    <div class="name">moonbit-community/yaml</div>
+    <div class="meta">11 文件 / 6,227 行 · check 0.7s / test 2.1s</div>
+    <div class="pill">编译 + 测试全过</div>
+  </div>
+  <div class="ok-card">
+    <div class="name">bobzhang/toml</div>
+    <div class="meta">36 文件 / 14,813 行 · check 3.2s / test 7.3s</div>
+    <div class="pill">编译 + 测试全过</div>
+  </div>
+  <div class="ok-card">
+    <div class="name">bobzhang/lexer</div>
+    <div class="meta">1 文件 / 276 行 · check 0.5s / test 1.7s</div>
+    <div class="pill">编译 + 测试全过</div>
+  </div>
 </div>
-<div class="stats">
-  <div class="stat"><div class="n">18</div><div class="l">验证总数</div></div>
-  <div class="stat"><div class="n">3</div><div class="l">可直接使用</div></div>
-  <div class="stat"><div class="n">16.7%</div><div class="l">可用率</div></div>
-  <div class="stat"><div class="n">325443</div><div class="l">源码总行数</div></div>
+
+<div class="section-title">📊 18 个包的结论分布</div>
+<div class="dist">
+  <div class="stack">
+    <div class="seg" style="flex:3;background:#22c55e" title="Verified">3</div>
+    <div class="seg" style="flex:3;background:#ef4444" title="DoesNotCompile">3</div>
+    <div class="seg" style="flex:2;background:#eab308" title="ToolchainMismatch">2</div>
+    <div class="seg" style="flex:3;background:#f97316" title="NoManifest">3</div>
+    <div class="seg" style="flex:7;background:#a855f7" title="Unsafe">7</div>
+  </div>
+  <div class="legend">
+    <span><i class="dot" style="background:#22c55e"></i>Verified 可直接用 · 3</span>
+    <span><i class="dot" style="background:#ef4444"></i>DoesNotCompile 编译失败 · 3</span>
+    <span><i class="dot" style="background:#eab308"></i>ToolchainMismatch 工具链版本差异 · 2</span>
+    <span><i class="dot" style="background:#f97316"></i>NoManifest 不是模块 · 3</span>
+    <span><i class="dot" style="background:#a855f7"></i>Unsafe 含 FFI 仅静态分析 · 7</span>
+  </div>
 </div>
-<h2 id="summary">结论分布</h2>
-<table>
-<thead><tr><th>结论</th><th>数量</th><th>占比</th><th>含义</th></tr></thead>
-<tbody>
-<tr><td class="ok c-verified"><code>Verified</code></td><td>3</td><td><div class="bar"><div class="fill fill-verified" style="width:16.7%"></div></div></td><td>编译与测试通过，可以直接使用</td></tr>
-<tr><td class="bad c-doesnotcompile"><code>DoesNotCompile</code></td><td>3</td><td><div class="bar"><div class="fill fill-doesnotcompile" style="width:16.7%"></div></div></td><td>编译器报错，当前工具链上不可用</td></tr>
-<tr><td class="warn c-toolchainmismatch"><code>ToolchainMismatch</code></td><td>2</td><td><div class="bar"><div class="fill fill-toolchainmismatch" style="width:11.1%"></div></div></td><td>版本/API 不兼容——不是包的问题，是工具链版本差异</td></tr>
-<tr><td class="bad c-nomanifest"><code>NoManifest</code></td><td>3</td><td><div class="bar"><div class="fill fill-nomanifest" style="width:16.7%"></div></div></td><td>没有 moon.mod，不是 MoonBit 模块</td></tr>
-<tr><td class="bad c-unsafe"><code>Unsafe</code></td><td>7</td><td><div class="bar"><div class="fill fill-unsafe" style="width:38.9%"></div></div></td><td>含 FFI 或自定义构建脚本，出于安全只做静态分析</td></tr>
-</tbody>
-</table>
-<h2 id="details">逐个结果</h2>
+
+<div class="section-title">📋 逐个结果</div>
 <div class="tbl-wrap"><table>
-<thead><tr><th>项目</th><th>结论</th><th>规模</th><th>耗时</th><th>证据</th></tr></thead>
+<thead><tr><th>包</th><th>结论</th><th>规模</th></tr></thead>
 <tbody>
-<tr><td><code>bobzhang/lexer</code></td><td class="ok c-verified">✅ <code class="b">Verified</code></td><td>1 文件 / 276 行</td><td>check 461ms / test 1.7s</td><td>—</td></tr>
-<tr><td><code>bobzhang/toml</code></td><td class="ok c-verified">✅ <code class="b">Verified</code></td><td>36 文件 / 14813 行</td><td>check 3.2s / test 7.3s</td><td>—</td></tr>
-<tr><td><code>moonbit-community/yaml</code></td><td class="ok c-verified">✅ <code class="b">Verified</code></td><td>11 文件 / 6227 行</td><td>check 700ms / test 2.1s</td><td>—</td></tr>
-<tr><td><code>q2316367743/moonhttp</code></td><td class="warn c-toolchainmismatch">🚫 <code class="b">ToolchainMismatch</code></td><td>66 文件 / 13169 行</td><td>check 2.3s</td><td class="ev" title="159         eprintln(&quot;fatal runtime error: \{err}&quot;)（特征: has no method）">159         eprintln(&quot;fatal runtime error: \{err}&quot;)（特征: has no method）</td></tr>
-<tr><td><code>JingLan0v0/jmespath</code></td><td class="warn c-toolchainmismatch">🚫 <code class="b">ToolchainMismatch</code></td><td>15 文件 / 1928 行</td><td>check 197ms / test 200ms</td><td class="ev" title="仓库声明的目标后端为 [js]，不含本次使用的 native">仓库声明的目标后端为 [js]，不含本次使用的 native</td></tr>
-<tr><td><code>moonbitlang/yacc</code></td><td class="bad c-doesnotcompile">❌ <code class="b">DoesNotCompile</code></td><td>75 文件 / 19453 行</td><td>check 764ms</td><td class="ev" title="Using cached moonbitlang/ulex-runtime@0.4.3">Using cached moonbitlang/ulex-runtime@0.4.3</td></tr>
-<tr><td><code>sundaysebasidian-byte/moon-loglens</code></td><td class="bad c-doesnotcompile">❌ <code class="b">DoesNotCompile</code></td><td>3 文件 / 817 行</td><td>check 1.2s</td><td class="ev" title="A bug report containing the error description and relevant code would be">A bug report containing the error description and relevant code would be</td></tr>
-<tr><td><code>sgy1023-crt/MoonCheck</code></td><td class="bad c-doesnotcompile">❌ <code class="b">DoesNotCompile</code></td><td>12 文件 / 1520 行</td><td>check 2.2s</td><td class="ev" title="A bug report containing the error description and relevant code would be">A bug report containing the error description and relevant code would be</td></tr>
-<tr><td><code>moonbitlang/quickcheck</code></td><td class="bad c-nomanifest">📄 <code class="b">NoManifest</code></td><td>—</td><td>—</td><td>—</td></tr>
-<tr><td><code>mizchi/tempfile</code></td><td class="bad c-nomanifest">📄 <code class="b">NoManifest</code></td><td>—</td><td>—</td><td>—</td></tr>
-<tr><td><code>mizchi/duckdb</code></td><td class="bad c-nomanifest">📄 <code class="b">NoManifest</code></td><td>—</td><td>—</td><td>—</td></tr>
-<tr><td><code>moonbitlang/x</code></td><td class="bad c-unsafe">🔒 <code class="b">Unsafe</code></td><td>133 文件 / 29082 行</td><td>check 0ms</td><td>—</td></tr>
-<tr><td><code>moonbitlang/parser</code></td><td class="bad c-unsafe">🔒 <code class="b">Unsafe</code></td><td>127 文件 / 142235 行</td><td>check 0ms</td><td>—</td></tr>
-<tr><td><code>mizchi/x</code></td><td class="bad c-unsafe">🔒 <code class="b">Unsafe</code></td><td>133 文件 / 23391 行</td><td>check 0ms</td><td>—</td></tr>
-<tr><td><code>moonbitlang/async</code></td><td class="bad c-unsafe">🔒 <code class="b">Unsafe</code></td><td>362 文件 / 50379 行</td><td>check 0ms</td><td>—</td></tr>
-<tr><td><code>mizchi/llm</code></td><td class="bad c-unsafe">🔒 <code class="b">Unsafe</code></td><td>63 文件 / 8055 行</td><td>check 0ms</td><td>—</td></tr>
-<tr><td><code>HhWw96/moonmmdb</code></td><td class="bad c-unsafe">🔒 <code class="b">Unsafe</code></td><td>65 文件 / 10855 行</td><td>check 0ms</td><td>—</td></tr>
-<tr><td><code>mizchi/zlib</code></td><td class="bad c-unsafe">🔒 <code class="b">Unsafe</code></td><td>20 文件 / 3243 行</td><td>check 0ms</td><td>—</td></tr>
+<tr><td class="pkg">moonbit-community/yaml</td><td><span class="tag t-verified">Verified</span></td><td class="scale">11 文件 / 6,227 行</td></tr>
+<tr><td class="pkg">bobzhang/toml</td><td><span class="tag t-verified">Verified</span></td><td class="scale">36 文件 / 14,813 行</td></tr>
+<tr><td class="pkg">bobzhang/lexer</td><td><span class="tag t-verified">Verified</span></td><td class="scale">1 文件 / 276 行</td></tr>
+<tr><td class="pkg">moonbitlang/yacc</td><td><span class="tag t-doesnotcompile">DoesNotCompile</span></td><td class="scale">75 文件 / 19,453 行</td></tr>
+<tr><td class="pkg">sgy1023-crt/MoonCheck</td><td><span class="tag t-doesnotcompile">DoesNotCompile</span></td><td class="scale">12 文件 / 1,520 行</td></tr>
+<tr><td class="pkg">sundaysebasidian-byte/moon-loglens</td><td><span class="tag t-doesnotcompile">DoesNotCompile</span></td><td class="scale">3 文件 / 817 行</td></tr>
+<tr><td class="pkg">q2316367743/moonhttp</td><td><span class="tag t-toolchainmismatch">ToolchainMismatch</span></td><td class="scale">66 文件 / 13,169 行</td></tr>
+<tr><td class="pkg">JingLan0v0/jmespath</td><td><span class="tag t-toolchainmismatch">ToolchainMismatch</span></td><td class="scale">15 文件 / 1,928 行</td></tr>
+<tr><td class="pkg">moonbitlang/quickcheck</td><td><span class="tag t-nomanifest">NoManifest</span></td><td class="scale">—</td></tr>
+<tr><td class="pkg">mizchi/tempfile</td><td><span class="tag t-nomanifest">NoManifest</span></td><td class="scale">—</td></tr>
+<tr><td class="pkg">mizchi/duckdb</td><td><span class="tag t-nomanifest">NoManifest</span></td><td class="scale">—</td></tr>
+<tr><td class="pkg">moonbitlang/parser</td><td><span class="tag t-unsafe">Unsafe</span></td><td class="scale">127 文件 / 142,235 行</td></tr>
+<tr><td class="pkg">moonbitlang/async</td><td><span class="tag t-unsafe">Unsafe</span></td><td class="scale">362 文件 / 50,379 行</td></tr>
+<tr><td class="pkg">moonbitlang/x</td><td><span class="tag t-unsafe">Unsafe</span></td><td class="scale">133 文件 / 29,082 行</td></tr>
+<tr><td class="pkg">mizchi/x</td><td><span class="tag t-unsafe">Unsafe</span></td><td class="scale">133 文件 / 23,391 行</td></tr>
+<tr><td class="pkg">mizchi/llm</td><td><span class="tag t-unsafe">Unsafe</span></td><td class="scale">63 文件 / 8,055 行</td></tr>
+<tr><td class="pkg">HhWw96/moonmmdb</td><td><span class="tag t-unsafe">Unsafe</span></td><td class="scale">65 文件 / 10,855 行</td></tr>
+<tr><td class="pkg">mizchi/zlib</td><td><span class="tag t-unsafe">Unsafe</span></td><td class="scale">20 文件 / 3,243 行</td></tr>
 </tbody>
 </table></div>
+
 <footer>
-由 <code>moonhive survey</code> 生成 · 源码：<a href="https://github.com/Duckweed-yhb/moon-hive">Duckweed-yhb/moon-hive</a> · MIT
+  <div><strong>验证环境：</strong>MoonBit 工具链 <code>moon 0.1.20260904</code> · 目标后端 <code>native</code> · 生成于 2026-09-27（UTC+8）</div>
+  <div style="margin-top:6px">由 <code>moonhive survey</code> 生成 · 源码 <a href="https://github.com/Duckweed-yhb/moon-hive">Duckweed-yhb/moon-hive</a> · MIT 协议</div>
 </footer>
+
+</div>
 </body>
 </html>
