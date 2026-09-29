@@ -1,0 +1,5 @@
+///|
+/// report/compare — 两份报告的对比
+import {
+  "Duckweed/moon-hive/report/model" @model,
+}
