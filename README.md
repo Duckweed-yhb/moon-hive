@@ -60,11 +60,12 @@ MoonHive 把这个结果归类为 `🚫 ToolchainMismatch`，而不是"这个包
 - **隔离工作区** — 一次性临时目录 + 磁盘配额 + 超时上限，永不执行仓库自带构建脚本
 - **本地仪表盘** — `serve` 把报告目录变成浏览器可访问的页面，只监听 127.0.0.1
 - **环境自检** — `doctor` 自动检出 git TLS 后端问题并给出修复命令
+- **收藏夹** — `keep` / `list` / `forget` 收藏验证过的包或感兴趣的 GitHub 项目，本地存 `favorites.json`，`list` 导出 `favorites.md`
 - **实测学习资源** — 验证引擎顺手攒出的 MoonBit 示例，`build.ps1 -Examples` 一键复验
 
 ## 现在做到哪了
 
-项目从 v1（每日项目投喂工具）重构为 v2（生态验证引擎）。v1 的 Base64 / Hex / digest / 收藏 / 统计等功能已全部移除，它们与"验证包能不能用"这条主线无关。
+项目经过一次重构：最初的 Base64 / Hex 编解码插件与"每日项目投喂"方向，已改为围绕"验证包能不能用"这条主线。验证之外，顺手攒出一批实测过的 MoonBit 示例作为学习资源。
 
 | 模块 | 状态 |
 |---|---|
@@ -77,7 +78,7 @@ MoonHive 把这个结果归类为 `🚫 ToolchainMismatch`，而不是"这个包
 | `verify/gitsource` — 候选解析 / git 克隆 / TLS 后端探测 | ✅ 已完成 |
 | `verify/diagnose` — 九类结论分类器 | ✅ 已完成 |
 | `verify/check` — 工具链驱动与验证编排 | ✅ 已完成 |
-| `features/*` — survey / inspect / doctor / serve 四个命令 | ✅ 已完成 |
+| `features/*` — survey / inspect / doctor / serve / favorites 五个命令 | ✅ 已完成 |
 | `report/*` — Markdown / JSON / HTML 三种报告 | ✅ 已完成 |
 
 测试 124 个用例全绿，构建 0 警告。`survey` 可同时产出三种报告，共用同一份数据模型：
@@ -200,6 +201,19 @@ moon run cmd/moonhive --target native -- inspect ./some-package
 2. 8080 是常用端口，常被其他软件占用，启动报端口被占用就换 `--port`。
 3. `build.ps1` 的 `-Run` 传参数，以 `-` 开头的选项要用数组形式（`@(...)`），否则 PowerShell 会把 `--dir` 当成 build.ps1 自己的参数而报错。
 
+### 收藏夹
+
+验证过程中遇到好用的包或感兴趣的 GitHub 项目，随手收藏，不丢：
+
+```bash
+moonhive keep moonbit-community/yaml --note "配置文件解析"
+moonhive keep someuser/some-repo --note "前端项目参考"
+moonhive list                  # 列出收藏，同时生成 favorites.md
+moonhive forget someuser/some-repo
+```
+
+收藏数据存在本地 `favorites.json`（已在 `.gitignore`，不进公开仓库）。
+
 ### 环境自检
 
 ```bash
@@ -236,7 +250,7 @@ verify/diagnose  ⭐⭐   编译器诊断解析 → 失败分类
 report/model            报告数据模型（纯计算，与验证层解耦）
 report/json             机器可读输出（含 schemaVersion 与完整转义）
 report/site             公开静态站（单文件 HTML，零依赖）
-features/*              命令实现（survey / inspect / doctor / serve）
+features/*              命令实现（survey / inspect / doctor / serve / favorites）
 ```
 
 分层边界（可替换性声明）：
