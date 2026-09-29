@@ -1,0 +1,6 @@
+///|
+/// features/favorites — 收藏夹：keep / list / forget
+import {
+  "Duckweed/moon-hive/platform/fs" @fs,
+  "moonbitlang/core/env" @env,
+}

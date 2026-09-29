@@ -4,6 +4,7 @@ pkgtype(kind: "executable")
 
 import {
   "Duckweed/moon-hive/features/doctor" @doctor,
+  "Duckweed/moon-hive/features/favorites" @favorites,
   "Duckweed/moon-hive/features/inspect" @inspect,
   "Duckweed/moon-hive/features/serve" @serve,
   "Duckweed/moon-hive/features/survey" @survey,
