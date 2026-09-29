@@ -15,12 +15,11 @@
 - 九类诊断结论：Verified / TestFailing / DoesNotCompile / ToolchainMismatch / MissingDependency / NoManifest / TimedOut / Unsafe / FetchFailed
 - 双获取方式：`git clone` 验证仓库最新代码，`--registry` 验证 mooncakes 发布版本
 - 隔离工作区：一次性临时目录 + 磁盘配额 + 超时上限，不执行仓库自带构建脚本
-- `examples/` go-by-example 风格主题示例库，`build.ps1 -Examples` 一键复验
-- `100days/` 按天推进的 MoonBit 教程
+- 收藏夹：keep / list / forget 三个命令，本地存 favorites.json
 - GitHub Actions CI（Linux / Windows 矩阵）
 
 ### 质量基线
 
-- 124 个单元测试，全部通过
+- 132 个单元测试，全部通过
 - 构建 0 警告
 - 仅依赖 MoonBit core 标准库与自建 C FFI 平台层，零第三方运行时依赖

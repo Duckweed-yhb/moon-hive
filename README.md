@@ -79,7 +79,7 @@ MoonHive 把这个结果归类为 `🚫 ToolchainMismatch`，而不是"这个包
 | `features/*` — survey / inspect / doctor / serve / favorites 五个命令 | ✅ 已完成 |
 | `report/*` — Markdown / JSON / HTML 三种报告 | ✅ 已完成 |
 
-测试 124 个用例全绿，构建 0 警告。`survey` 可同时产出三种报告，共用同一份数据模型：
+测试 132 个用例全绿，构建 0 警告。`survey` 可同时产出三种报告，共用同一份数据模型：
 
 | 格式 | 参数 | 用途 |
 |---|---|---|

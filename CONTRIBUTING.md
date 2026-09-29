@@ -4,8 +4,8 @@
 
 ## 项目是什么
 
-MoonHive = **MoonBit 生态验证引擎** + **MoonBit by Example 学习库**。
-验证引擎用真实 MoonBit 工具链逐个验证生态包能否编译、测试是否通过，把失败归为九类可行动结论；学习库提供按主题（By Example）与按天（100 Days）两种入口的示例驱动学习资源。
+MoonHive = **MoonBit 生态验证引擎**。
+用真实 MoonBit 工具链逐个验证生态包能否编译、测试是否通过，把失败归为九类可行动结论。
 
 ## 环境准备
 
@@ -17,7 +17,7 @@ MoonHive = **MoonBit 生态验证引擎** + **MoonBit by Example 学习库**。
 
 ```powershell
 ./build.ps1              # 构建
-./build.ps1 -Test        # 构建 + 全部测试（当前 124 个，须保持全绿）
+./build.ps1 -Test        # 构建 + 全部测试（当前 132 个，须保持全绿）
 ./build.ps1 -Run doctor  # 构建 + 运行环境自检
 ```
 
@@ -44,15 +44,6 @@ MoonHive = **MoonBit 生态验证引擎** + **MoonBit by Example 学习库**。
 3. **新功能必须带测试**，提交前确认 `moon test` 全绿、构建零警告
 4. 注释写"为什么"而不是"是什么"；用中文注释
 5. PR 描述写清：改了什么、为什么、测试结果
-
-### 贡献示例（by-example）
-
-学习库的示例是最好入手的贡献点：
-
-1. 在 `examples/<主题>/` 建五件套：`main.mbt` / `moon.mod` / `moon.pkg` / `expected.txt` / `note.md`
-2. 在示例目录运行并确认输出与 `expected.txt` 一致（`--target-dir` 用纯 ASCII 目录）
-3. 在 [examples/README.md](examples/README.md) 清单中登记，并同步 [100days/](100days/README.md) 对应 Day 页
-4. 提 PR
 
 ## 代码规范
 
