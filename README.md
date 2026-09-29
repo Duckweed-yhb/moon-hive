@@ -160,7 +160,6 @@ $ moonhive inspect --registry moonbit-community/yaml
 ```powershell
 ./build.ps1              # 构建
 ./build.ps1 -Test        # 构建 + 测试
-./build.ps1 -Examples    # 验证 examples/ 全部示例（编译运行 + 比对 expected.txt）
 ./build.ps1 -Run doctor  # 构建 + 运行 moonhive doctor
 ```
 
@@ -174,18 +173,18 @@ Windows 上还需确认 git 的 TLS 后端可用。`moonhive doctor` 会自动�
 
 ### 运行
 
-```bash
+```powershell
 # 环境自检（会检出 git TLS 后端问题并给出修复建议）
-moon run cmd/moonhive --target native -- doctor
+./build.ps1 -Run doctor
 
 # 体检一个远端仓库（走 git clone，验证默认分支最新代码）
-moon run cmd/moonhive --target native -- inspect moonbit-community/yaml
+./build.ps1 -Run @("inspect", "moonbit-community/yaml")
 
 # 体检一个注册表包（moon fetch 发布版本，用户真正会装到的那个）
-moon run cmd/moonhive --target native -- inspect --registry moonbit-community/yaml
+./build.ps1 -Run @("inspect", "--registry", "moonbit-community/yaml")
 
 # 体检一个本地目录（无需联网）
-moon run cmd/moonhive --target native -- inspect ./some-package
+./build.ps1 -Run @("inspect", "./some-package")
 
 # 把报告目录变成浏览器仪表盘（本地 HTTP，仅监听 127.0.0.1）
 # 仓库路径含中文时请用 build.ps1（直接 moon run 会因汇编器无法处理中文路径而失败）：
@@ -293,7 +292,7 @@ features/*              命令实现（survey / inspect / doctor / serve / favor
 
 - 同一包在不同 moon 版本上验证，把"包坏了"和"工具链演进"分开看
 - 定时跑 survey，追踪生态包可用性的变化
-- 把 examples/ 接入验证引擎，发布站点时自动标注每个示例的实测结果
+- 像 shields.io 那样给每个 mooncakes 包提供验证状态 Badge
 
 ## 链接
 
