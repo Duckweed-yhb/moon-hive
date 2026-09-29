@@ -313,6 +313,160 @@ fn truncate(s : String, n : Int) -> String {
   }
 }
 
+// ---------- 错误统计与缺失符号提取 ----------
+
+///|
+/// 从 moon check 输出里提取错误数与警告数。
+///
+/// MoonBit 末尾输出形如：
+///     Failed with 0 warnings, 14 errors.
+///     Finished. moon: ran 3 tasks, now up to date (3 warnings, 0 errors)
+/// 返回 (errors, warnings)。
+pub fn count_issues(text : String) -> (Int, Int) {
+  let lower = text.to_lower()
+  let mut errors = 0
+  let mut warnings = 0
+  let lines = lower.split("\n")
+  for line in lines {
+    let l = line.trim().to_owned()
+    if l.contains("warnings") && l.contains("errors") {
+      // 找 "warnings" 前面紧邻的数字 = warnings 数
+      // 找 "errors" 前面紧邻的数字 = errors 数
+      warnings = number_before_word(l, "warnings")
+      errors = number_before_word(l, "errors")
+    }
+  }
+  (errors, warnings)
+}
+
+///|
+/// 找某单词前面紧邻的数字。例如 "3 warnings" → 3
+fn number_before_word(s : String, word : String) -> Int {
+  let lower = s.to_lower()
+  let idx = lower.find(word)
+  if idx is None { return 0 }
+  let i = idx.unwrap()
+  // 从 i 往前找数字串
+  let mut end = i - 1
+  // 跳过空格
+  while end >= 0 && (s.unsafe_get(end) == ' ' || s.unsafe_get(end) == '\t') {
+    end = end - 1
+  }
+  // 收集数字
+  let mut start = end
+  while start >= 0 && s.unsafe_get(start) >= '0' && s.unsafe_get(start) <= '9' {
+    start = start - 1
+  }
+  if start == end { return 0 } // 没找到数字
+  let num_str = s[start + 1:end + 1].to_owned()
+  parse_int(num_str)
+}
+
+///|
+/// 字符转数字（'0'→0, '1'→1 ... '9'→9）
+fn char_to_digit(c : Char) -> Int {
+  match c {
+    '0' => 0
+    '1' => 1
+    '2' => 2
+    '3' => 3
+    '4' => 4
+    '5' => 5
+    '6' => 6
+    '7' => 7
+    '8' => 8
+    '9' => 9
+    _ => 0
+  }
+}
+
+///|
+/// 手动把数字字符串转 Int（避免依赖 core parse API）
+fn parse_int(s : String) -> Int {
+  let mut n = 0
+  for c in s {
+    if c >= '0' && c <= '9' {
+      n = n * 10 + char_to_digit(c)
+    }
+  }
+  n
+}
+
+///|
+/// 从 "Type X has no method Y" 这类错误里提取缺失的符号名。
+///
+/// 例如 "Type Bytes has no method exact_view." → "Bytes.exact_view"
+/// 例如 "unresolved identifier @json.parse_ex" → "json.parse_ex"
+/// 提取出来是给用户看"具体缺什么"，比只看一行错误有用。
+pub fn extract_missing_symbols(text : String) -> Array[String] {
+  let symbols : Array[String] = []
+  for line in text.split("\n") {
+    let l = strip_box_chars(line.trim().to_owned())
+    // 模式1: "Type X has no method Y"
+    if l.contains("has no method") {
+      let parts = l.split("has no method").to_array()
+      if parts.length() >= 2 {
+        let type_part = parts[0].trim().to_owned()
+        let method_part = parts[1].trim().to_owned()
+        // type_part 形如 "Type Bytes"，提取 Bytes
+        let type_name = if type_part.has_prefix("Type ") {
+          type_part[5:].to_owned()
+        } else {
+          type_part
+        }
+        // method_part 形如 "exact_view."，去掉末尾句号
+        let method_name = if method_part.has_suffix(".") {
+          method_part[0:method_part.length() - 1].to_owned()
+        } else {
+          method_part
+        }
+        if type_name != "" && method_name != "" {
+          symbols.push(type_name + "." + method_name)
+        }
+      }
+    }
+    // 模式2: "unresolved identifier X"
+    if l.contains("unresolved identifier") {
+      let parts = l.split("unresolved identifier").to_array()
+      if parts.length() >= 2 {
+        let name = parts[1].trim().to_owned()
+        // 去掉 @ 前缀和句号
+        let clean = if name.has_prefix("@") { name[1:].to_owned() } else { name }
+        let clean2 = if clean.has_suffix(".") { clean[0:clean.length() - 1].to_owned() } else { clean }
+        if clean2 != "" {
+          symbols.push(clean2)
+        }
+      }
+    }
+  }
+  symbols
+}
+
+///|
+/// 把错误统计和缺失符号拼成一行摘要，附在 evidence 前面。
+fn enrich_evidence(base : String, text : String) -> String {
+  let (errors, warnings) = count_issues(text)
+  let symbols = extract_missing_symbols(text)
+  let mut prefix = ""
+  if errors > 0 || warnings > 0 {
+    prefix = errors.to_string() + " errors"
+    if warnings > 0 {
+      prefix += " / " + warnings.to_string() + " warnings"
+    }
+    prefix += ": "
+  }
+  if symbols.length() > 0 {
+    let mut sym_str = "缺失: "
+    for i in 0..<symbols.length() {
+      if i > 0 { sym_str += ", " }
+      sym_str += symbols[i]
+    }
+    sym_str += " | "
+    prefix += sym_str
+  }
+  prefix + base
+}
+
 // ---------- 分类 ----------
 
 ///|
@@ -364,7 +518,7 @@ pub fn classify(o : CheckOutcome) -> Diagnosis {
   // 5. check 失败：区分工具链问题 / 依赖问题 / 真正的编译错误
   if o.check.exit_code != 0 {
     let text = o.check.stdout + "\n" + o.check.stderr
-    let evidence = first_error_line(text)
+    let evidence = enrich_evidence(first_error_line(text), text)
     // 5a. 依赖解析失败优先判定——它常常同时包含 "unknown" 之类的字样
     if first_marker(text, missing_dependency_markers()) is Some(_) &&
       first_marker(text, ["failed to resolve", "cannot find module", "cannot find package", "no such package"]) is
@@ -618,4 +772,58 @@ test "label 与 enum 名一致（报告与 JSON 依赖它稳定）" {
   assert_eq(label(ToolchainMismatch("x")), "ToolchainMismatch")
   assert_eq(label(MissingDependency("x")), "MissingDependency")
   assert_eq(label(NoManifest), "NoManifest")
+}
+
+test "count_issues 提取 Failed with N warnings, M errors" {
+  let text = "Failed with 0 warnings, 14 errors."
+  let (e, w) = count_issues(text)
+  assert_eq(e, 14)
+  assert_eq(w, 0)
+}
+
+test "count_issues 提取括号里的 N warnings, M errors" {
+  let text = "Finished. moon: ran 3 tasks, now up to date (3 warnings, 0 errors)"
+  let (e, w) = count_issues(text)
+  assert_eq(e, 0)
+  assert_eq(w, 3)
+}
+
+test "count_issues 无错误信息返回 0,0" {
+  let (e, w) = count_issues("all good")
+  assert_eq(e, 0)
+  assert_eq(w, 0)
+}
+
+test "extract_missing_symbols 从 has no method 提取" {
+  let text = "Error: [4015]\n  Type Bytes has no method exact_view."
+  let syms = extract_missing_symbols(text)
+  assert_eq(syms.length(), 1)
+  assert_eq(syms[0], "Bytes.exact_view")
+}
+
+test "extract_missing_symbols 从 unresolved identifier 提取" {
+  let text = "error: unresolved identifier @json.parse_ex"
+  let syms = extract_missing_symbols(text)
+  assert_eq(syms.length(), 1)
+  assert_eq(syms[0], "json.parse_ex")
+}
+
+test "extract_missing_symbols 多个缺失" {
+  let text = "Type Bytes has no method a.\n  Type Parser has no method b."
+  let syms = extract_missing_symbols(text)
+  assert_eq(syms.length(), 2)
+  assert_eq(syms[0], "Bytes.a")
+  assert_eq(syms[1], "Parser.b")
+}
+
+test "enrich_evidence 在证据前加统计和缺失符号" {
+  let text = "Failed with 0 warnings, 14 errors.\n  Type Bytes has no method exact_view."
+  let e = enrich_evidence("Type Bytes has no method exact_view.", text)
+  assert_true(e.contains("14 errors"))
+  assert_true(e.contains("Bytes.exact_view"))
+}
+
+test "enrich_evidence 无错误统计时不加前缀" {
+  let e = enrich_evidence("some error", "no summary here")
+  assert_eq(e, "some error")
 }
