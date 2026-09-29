@@ -1,6 +1,0 @@
-n = 42
-pi = 3.140000104904175
-name = MoonBit
-ok = true
-letter = M
-inferred = 2026

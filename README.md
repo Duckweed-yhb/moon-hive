@@ -1,6 +1,6 @@
 # MoonHive
 
-> 用真实 MoonBit 工具链验证生态里的包能不能编译、测试过不过。验证做得久了，顺手把实测过的示例整理成了学习资源。
+> 用真实 MoonBit 工具链验证生态里的包能不能编译、测试过不过。
 
 [![CI](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml/badge.svg)](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -15,7 +15,6 @@
 - [安全](#安全)
 - [平台支持](#平台支持)
 - [已知限制](#已知限制)
-- [学习资源](#学习资源)
 - [未来方向](#未来方向)
 - [链接](#链接)
 - [许可证](#许可证)
@@ -61,7 +60,6 @@ MoonHive 把这个结果归类为 `🚫 ToolchainMismatch`，而不是"这个包
 - **本地仪表盘** — `serve` 把报告目录变成浏览器可访问的页面，只监听 127.0.0.1
 - **环境自检** — `doctor` 自动检出 git TLS 后端问题并给出修复命令
 - **收藏夹** — `keep` / `list` / `forget` 收藏验证过的包或感兴趣的 GitHub 项目，本地存 `favorites.json`，`list` 导出 `favorites.md`
-- **实测学习资源** — 验证引擎顺手攒出的 MoonBit 示例，`build.ps1 -Examples` 一键复验
 
 ## 现在做到哪了
 
@@ -291,18 +289,6 @@ features/*              命令实现（survey / inspect / doctor / serve / favor
 - 远端克隆依赖本机 git 的 TLS 后端可用，`moonhive doctor` 能检测并给出修复命令
 - 本地仪表盘只监听 127.0.0.1，访问要用 `127.0.0.1` 而不是 `localhost`（Windows 上 localhost 会优先解析 IPv6）
 
-## 学习资源
-
-验证引擎在验证生态包的同时，攒出一批实测过的 MoonBit 示例。每个示例都由工具链真实编译运行，输出不是手打的，`./build.ps1 -Examples` 可以一键复验。这些示例整理成两种学法的学习资源：
-
-### MoonBit by Example
-
-go-by-example 风格的主题示例库：每个示例一页，可运行代码 + 真实输出 + 要点讲解，适合按需查阅，想学 match 直接打开 match 示例。已完成 Day 01–05（hello / variables / types / functions / control），全部实测通过，目标覆盖基础到实战共 25 个主题。入口：[examples/README.md](examples/README.md)。
-
-### 100 Days of MoonBit
-
-python-100-days 风格的每日教程：每天一篇完整文章，概念引入、代码分段讲解、Windows 常见坑、动手练习、今日小结，适合从头系统学、靠节奏坚持。已完成 Day 01–02（初识 MoonBit / 变量与绑定），后续随示例推进。入口：[100days/README.md](100days/README.md)。
-
 ## 未来方向
 
 - 同一包在不同 moon 版本上验证，把"包坏了"和"工具链演进"分开看
@@ -312,8 +298,6 @@ python-100-days 风格的每日教程：每天一篇完整文章，概念引入�
 ## 链接
 
 - [网页版验证报告](https://Duckweed-yhb.github.io/moon-hive/) — 18 个真实包的三轮普查结果
-- [By Example 示例库](examples/README.md) — 按主题查
-- [100 Days 教程](100days/README.md) — 按天系统学
 - [贡献指南](CONTRIBUTING.md) · [路线图](ROADMAP.md) · [变更日志](CHANGELOG.md)
 
 ## 许可证

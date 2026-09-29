@@ -14,7 +14,6 @@
 # 用法：
 #   ./build.ps1                   构建（release + native）
 #   ./build.ps1 -Test             构建后跑测试
-#   ./build.ps1 -Examples         验证 examples/ 下全部示例（编译运行并比对 expected.txt）
 #   ./build.ps1 -Run doctor       构建后运行 moonhive 子命令
 #   ./build.ps1 -Clean            先清理构建目录
 #   ./build.ps1 -TargetDir D:\mb  指定产物目录（必须是纯 ASCII 路径）
@@ -22,7 +21,6 @@
 
 param(
   [switch]$Test,
-  [switch]$Examples,
   [switch]$Clean,
   [string]$TargetDir = "",
   [Parameter(ValueFromRemainingArguments = $true)]
@@ -111,59 +109,6 @@ try {
     Invoke-Moon "moon test --target native" @(
       "test", "--target", "native", "--target-dir", "$TargetDir"
     )
-  }
-
-  if ($Examples) {
-    Write-Host ""
-    Write-Host "==> 验证 examples/ 全部示例（真实编译运行，比对 expected.txt）" -ForegroundColor Cyan
-    $examplesRoot = Join-Path $root "examples"
-    $exampleDirs = Get-ChildItem $examplesRoot -Directory | Where-Object {
-      Test-Path (Join-Path $_.FullName "moon.pkg")
-    } | Sort-Object Name
-    $pass = 0
-    $fail = 0
-    foreach ($dir in $exampleDirs) {
-      $name = $dir.Name
-      $expectedFile = Join-Path $dir.FullName "expected.txt"
-      if (-not (Test-Path $expectedFile)) {
-        Write-Host "  [SKIP] $name 无 expected.txt" -ForegroundColor Yellow
-        continue
-      }
-      $target = Join-Path $env:TEMP ("mh-examples-" + $name)
-      $prev = $ErrorActionPreference
-      $ErrorActionPreference = "Continue"
-      Push-Location $dir.FullName
-      try {
-        $out = & $moon "run" "main.mbt" "--target-dir" "$target" 2>$null
-        $code = $LASTEXITCODE
-      } finally {
-        Pop-Location
-        $ErrorActionPreference = $prev
-      }
-      if ($code -ne 0) {
-        Write-Host "  [FAIL] $name 运行失败（退出码 $code）" -ForegroundColor Red
-        $fail++
-        continue
-      }
-      $expected = (Get-Content -Encoding UTF8 $expectedFile | ForEach-Object { $_.TrimEnd() }) -join "`n"
-      $actual = (@($out) | ForEach-Object { "$_".TrimEnd() }) -join "`n"
-      if ($actual -eq $expected) {
-        Write-Host "  [PASS] $name 输出与 expected.txt 一致" -ForegroundColor Green
-        $pass++
-      } else {
-        Write-Host "  [FAIL] $name 输出不一致" -ForegroundColor Red
-        Write-Host "    期望: $expected"
-        Write-Host "    实际: $actual"
-        $fail++
-      }
-    }
-    Write-Host ""
-    if ($fail -eq 0) {
-      Write-Host "示例验证: $pass 个全部通过（真实工具链实测）" -ForegroundColor Green
-    } else {
-      Write-Host "示例验证: $pass 通过, $fail 失败" -ForegroundColor Red
-      exit 1
-    }
   }
 
   if ($Run.Count -gt 0) {
