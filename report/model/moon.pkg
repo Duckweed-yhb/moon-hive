@@ -1,3 +1,7 @@
 ///|
 /// report/model — 报告数据模型（纯计算，无平台依赖）
+///
+/// supported_targets：全后端（理由见 verify/diagnose/moon.pkg）。
+supported_targets = "wasm+wasm-gc+js+native"
+
 import {}

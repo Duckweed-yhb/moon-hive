@@ -1,7 +1,11 @@
 ///|
 /// platform/fs — 文件系统层
 ///
-/// 只有本包（与 platform/proc）允许出现 C FFI。
+/// 只有本包（与 platform/proc、platform/http）允许出现 C FFI。
+/// supported_targets = "native"：把 C FFI 的可移植性边界交给构建器强制，
+/// 详见 platform/proc/moon.pkg 的说明。
+supported_targets = "native"
+
 options(
   "native-stub": ["fs_stub.c"],
 )

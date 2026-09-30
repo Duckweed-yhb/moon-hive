@@ -1,3 +1,8 @@
 // 根包：模块占位（实际代码在 core/ platform/ features/ cmd/）
 // 入口在 cmd/moonhive/
+//
+// 本包自身是纯占位、无依赖，因此声明全后端——避免它成为模块里
+// 唯一没表态的包，也让 `moon check --target wasm` 不带警告通过。
+supported_targets = "wasm+wasm-gc+js+native"
+
 import {}

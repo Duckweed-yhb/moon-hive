@@ -1,5 +1,9 @@
 ///|
 /// features/favorites — 收藏夹：keep / list / forget
+///
+/// supported_targets = "native"：写本地 favorites.json，依赖 platform/fs。
+supported_targets = "native"
+
 import {
   "Duckweed/moon-hive/platform/fs" @fs,
   "moonbitlang/core/env" @env,

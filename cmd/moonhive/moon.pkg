@@ -1,6 +1,10 @@
 ///|
 /// MoonHive 可执行入口
+///
+/// 这是**参考消费者**，不是库本身：它把 features/* 组装成 CLI。
+/// supported_targets = "native" 从这里的依赖图继承（→ features → verify → platform）。
 pkgtype(kind: "executable")
+supported_targets = "native"
 
 import {
   "Duckweed/moon-hive/features/doctor" @doctor,

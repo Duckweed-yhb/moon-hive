@@ -1,3 +1,8 @@
 ///|
 /// platform/time — 耗时与超时判定（纯计算，无 FFI）
+///
+/// 名字里带 platform，但它是这条分层里唯一**不含 C FFI** 的 platform 包：
+/// 只做整数运算与格式化，因此全后端可用（理由见 verify/diagnose/moon.pkg）。
+supported_targets = "wasm+wasm-gc+js+native"
+
 import {}

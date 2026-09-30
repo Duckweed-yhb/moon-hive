@@ -3,6 +3,10 @@
 ///
 /// 把 survey 生成的报告目录变成一个浏览器可打开的仪表盘：
 /// `moonhive serve --dir reports` → 打开 http://127.0.0.1:8080
+///
+/// supported_targets = "native"：本地 HTTP 服务走 Winsock / POSIX socket C FFI。
+supported_targets = "native"
+
 import {
   "Duckweed/moon-hive/platform/fs" @fs,
   "Duckweed/moon-hive/platform/http" @http,

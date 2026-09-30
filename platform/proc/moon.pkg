@@ -1,7 +1,14 @@
 ///|
 /// platform/proc — 原生后端进程与文件子系统
 ///
-/// 只有本包（与 platform/fs）允许出现 C FFI。
+/// 只有本包（与 platform/fs、platform/http）允许出现 C FFI。
+///
+/// supported_targets 让工具链**在构建期强制**这条边界：extern "C" 在
+/// wasm / wasm-gc / js 后端不存在，因此本包只声明 native。任何试图把
+/// platform 层拉进非 native 目标的构建都会在 moon check 阶段失败，
+/// 而不是到运行时才发现。verify/ 与 report/ 等纯计算包不受影响。
+supported_targets = "native"
+
 options(
   "native-stub": ["proc_stub.c"],
 )

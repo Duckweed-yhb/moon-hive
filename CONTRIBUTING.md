@@ -4,30 +4,34 @@
 
 ## 项目是什么
 
-MoonHive = **MoonBit 生态验证引擎**。
-用真实 MoonBit 工具链逐个验证生态包能否编译、测试是否通过，把失败归为九类可行动结论。
+MoonHive = **MoonBit 工具链输出的诊断归因库**，附带一个参考 CLI。
+给它一段 `moon check` 的输出，判断这堆错误是"包真的坏了"还是"工具链版本对不上"——把健康的库标成不可用，比没有工具更糟。
+
+库核心（归因分类器与报告渲染）是纯计算，在 `wasm` / `wasm-gc` / `js` / `native` 四个后端都可编译可测试；C FFI 与 CLI 链路限定 native。
 
 ## 环境准备
 
 - MoonBit 工具链（当前开发环境 `moon 0.1.20260904`，native 后端）
 - git
-- Windows 注意：**仓库路径含非 ASCII 字符时，直接用 `build.ps1`**——GNU assembler 无法处理中文路径，`build.ps1` 会把产物重定向到系统临时目录（纯 ASCII）
+- Windows 注意：**仓库路径含非 ASCII 字符时，直接用 `build.ps1`**——GNU assembler 无法处理中文路径，`build.ps1` 会把产物重定向到系统临时目录（纯 ASCII）。`build.ps1` 必须存为 UTF-8 **带 BOM**（PowerShell 5.1 会把无 BOM 文件按 GBK 解码，中文注释会导致解析失败）
 
 ## 快速开始
 
 ```powershell
-./build.ps1              # 构建
-./build.ps1 -Test        # 构建 + 全部测试（当前 132 个，须保持全绿）
-./build.ps1 -Run doctor  # 构建 + 运行环境自检
+./build.ps1                 # 构建
+./build.ps1 -Test           # 构建 + 全部测试（当前 140 个，须保持全绿）
+./build.ps1 -CrossBackend   # 额外验证库核心在 wasm / wasm-gc / js 上可用（各 87 个）
+./build.ps1 -Run doctor     # 构建 + 运行环境自检
 ```
 
 ## 项目结构
 
-分层边界请先读 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。三条硬规则：
+分层边界请先读 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。四条硬规则：
 
-1. **只有 `platform/*` 允许出现 C FFI**（core 不含文件系统与进程模块，这是自建 FFI 的原因）
+1. **只有 `platform/proc`、`platform/fs`、`platform/http` 允许出现 C FFI**（core 不含文件系统与进程模块，这是自建 FFI 的原因）
 2. 只有 `verify/check` 知道如何调用 `moon` 命令
-3. `core/*` 与 `report/*` 不知道文件系统与进程的存在，因此可以 100% 单元测试
+3. `core/*`、`verify/diagnose`、`report/*` 不知道文件系统与进程的存在，因此可以 100% 单元测试
+4. **库核心不得引入平台依赖**——这条由各包 `supported_targets` 在构建期强制：改动若破坏了它，`moon test --target wasm` 会直接失败
 
 ## 如何贡献
 

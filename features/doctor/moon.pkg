@@ -1,5 +1,9 @@
 ///|
 /// features/doctor — 环境自检
+///
+/// supported_targets = "native"：自检要探测工具链与临时目录，依赖 platform 层。
+supported_targets = "native"
+
 import {
   "Duckweed/moon-hive/platform/fs" @fs,
   "Duckweed/moon-hive/platform/proc" @proc,

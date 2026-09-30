@@ -11,16 +11,28 @@
 #   本脚本把构建产物重定向到一个纯 ASCII 的目录，从而绕过该限制。
 #   这不改变任何源码，只改产物落盘位置。
 #
+#   注意：本文件必须以 **UTF-8 BOM** 保存。Windows PowerShell 5.1 会把
+#   无 BOM 的文件按 ANSI（中文环境为 GBK）解码，中文注释会被解成乱码，
+#   严重时直接解析失败。普通编辑器「另存为 UTF-8」常常不带 BOM，
+#   改动本文件后请确认头三字节是 EF BB BF。
+#
 # 用法：
 #   ./build.ps1                   构建（release + native）
 #   ./build.ps1 -Test             构建后跑测试
+#   ./build.ps1 -CrossBackend     额外在 wasm / wasm-gc / js 后端跑库核心测试
 #   ./build.ps1 -Run doctor       构建后运行 moonhive 子命令
 #   ./build.ps1 -Clean            先清理构建目录
 #   ./build.ps1 -TargetDir D:\mb  指定产物目录（必须是纯 ASCII 路径）
+#
+# 关于 -CrossBackend：本模块是「可移植纯计算的库核心 + 仅 native 的 CLI」，
+# 两边边界由各 moon.pkg 的 supported_targets 声明、由工具链在构建期强制。
+# 本开关把该边界变成可复现的验证：库核心包必须在四个后端都能编译并跑测试，
+# 而 cmd/moonhive 与 platform/* 会被自动排除（它们声明了 supported_targets=native）。
 # ============================================================
 
 param(
   [switch]$Test,
+  [switch]$CrossBackend,
   [switch]$Clean,
   [string]$TargetDir = "",
   [Parameter(ValueFromRemainingArguments = $true)]
@@ -109,6 +121,17 @@ try {
     Invoke-Moon "moon test --target native" @(
       "test", "--target", "native", "--target-dir", "$TargetDir"
     )
+  }
+
+  if ($CrossBackend) {
+    # 库核心包必须在非 native 后端可用。工具链会按 supported_targets 过滤掉
+    # cmd/moonhive 与 platform/*，因此这里跑的就是「库边界内的那些包」。
+    foreach ($t in @("wasm", "wasm-gc", "js")) {
+      Write-Host ""
+      Invoke-Moon "moon test --target $t（库核心跨后端）" @(
+        "test", "--target", $t, "--target-dir", "$TargetDir"
+      )
+    }
   }
 
   if ($Run.Count -gt 0) {

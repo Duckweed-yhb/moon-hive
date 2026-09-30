@@ -1,5 +1,11 @@
 ///|
 /// features/survey — 批量普查与多格式报告生成
+///
+/// supported_targets = "native"：调 verify/check 跑工具链 + platform 层落盘。
+/// 注意它 import 的 report/* 与 verify/diagnose 本身是全后端纯计算包，
+/// native 约束只来自本包的 I/O 能力。
+supported_targets = "native"
+
 import {
   "Duckweed/moon-hive/platform/fs" @fs,
   "Duckweed/moon-hive/platform/proc" @proc,

@@ -3,9 +3,56 @@
 [![CI](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml/badge.svg)](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-MoonBit 生态包验证工具。把候选包拉进隔离工作区，用真实工具链逐个验证能否编译、测试是否通过，失败归为九类可行动结论。
+**MoonBit 工具链输出的诊断归因库**，附带一个参考 CLI。
+
+给它一段 `moon check` 的输出，它告诉你这堆错误到底意味着什么——是包真的坏了，还是你的工具链版本对不上。
+
+```moonbit
+// 库核心与平台能力完全解耦：这里不 import 任何 C FFI 包
+let outcome : @diagnose.CheckOutcome = { .. }
+match @diagnose.classify(outcome) {
+  ToolchainMismatch(why) => println("不是包的错：" + why)
+  DoesNotCompile(why)    => println("包在当前工具链上不可用：" + why)
+  Verified               => println("可以直接用")
+  _                      => ()
+}
+```
 
 star 数告诉你包火不火，MoonHive 告诉你包能不能用。
+
+## 为什么归因是独立的一件事
+
+`moon check` 失败只给你一个非零退出码和一堆错误文本。**把错误文本读成结论，才是难点**：
+
+实测 `moonbitlang/x`（生态里最活跃的库之一，167 个 `.mbt` 文件）在某台工具链上：
+
+```
+$ moon check --target native
+Failed with 0 warnings, 14 errors.
+  Type Bytes has no method exact_view.
+```
+
+一句 `git clone && moon check` 脚本会把这个包记成"编译失败"。**但它没有坏——是工具链版本差了一档。** 把健康的库标成不可用，比没有工具更糟。
+
+区分这两者需要理解 MoonBit 编译器的错误措辞（`has no method` / `unresolved identifier` / `unknown type` …），并且**判定顺序不能错**：依赖缺失和工具链不兼容的特征经常同时出现，顺序错了就会给出误导性结论。详见 [九类结论与判定顺序](docs/ARCHITECTURE.md#九类结论与判定顺序)。
+
+## 库核心是全后端可移植的（构建期强制，不是文档口号）
+
+仓库里有一条硬边界：**C FFI 只允许出现在 `platform/proc`、`platform/fs`、`platform/http` 三个包**（`extern "C"` 要起子进程、读文件、开 socket）。其余全是纯计算。
+
+这条边界由各包的 `supported_targets` 声明、由工具链在构建期强制——任何人试图把 FFI 拖进库核心，`moon check` 立刻失败：
+
+| 层 | 包 | 后端 |
+|---|---|---|
+| **库核心**（纯计算，零平台依赖） | `verify/diagnose`、`report/model`、`report/json`、`report/compare`、`report/site`、`platform/time`、`core/error` | `wasm` `wasm-gc` `js` `native` |
+| 平台层（唯一允许 C FFI） | `platform/proc`、`platform/fs`、`platform/http` | 仅 `native` |
+| 参考 CLI | `cmd/moonhive`、`features/*`、`verify/check`、`verify/workspace`、`verify/gitsource` | 仅 `native` |
+
+因此库核心能在浏览器/Wasm 环境里直接用，CI 会在四个后端上分别编译并跑测试：
+
+```powershell
+./build.ps1 -CrossBackend   # => wasm / wasm-gc / js 各 87 测试全绿，native 140
+```
 
 ## 结论分类
 
@@ -23,6 +70,7 @@ star 数告诉你包火不火，MoonHive 告诉你包能不能用。
 
 ## 特性
 
+- **库核心零平台依赖**：归因分类器与报告渲染是纯计算，可在 `wasm` / `wasm-gc` / `js` / `native` 四个后端编译运行（边界由 `supported_targets` 在构建期强制）
 - **双获取方式**：`git clone` 验证仓库最新代码，`--registry` 验证 mooncakes 发布版本
 - **三种报告格式**：Markdown（人读）、JSON（机器读，带 schemaVersion）、单文件 HTML（可直接托管）
 - **隔离工作区**：一次性临时目录 + 磁盘配额 + 超时上限，不执行仓库自带构建脚本
@@ -41,8 +89,9 @@ star 数告诉你包火不火，MoonHive 告诉你包能不能用。
 仓库自带 `build.ps1` 处理中文路径问题（GNU assembler 无法处理非 ASCII 路径）：
 
 ```powershell
-./build.ps1              # 构建
-./build.ps1 -Test       # 构建 + 测试
+./build.ps1                 # 构建
+./build.ps1 -Test           # 构建 + 测试
+./build.ps1 -CrossBackend   # 额外验证库核心在 wasm / wasm-gc / js 上可用
 ```
 
 ### 常用命令
@@ -84,7 +133,18 @@ star 数告诉你包火不火，MoonHive 告诉你包能不能用。
 | NoManifest | 3 | `quickcheck`、`tempfile`、`duckdb` |
 | Unsafe | 7 | `x`、`async`、`parser`、`zlib`、`llm`、`moonmmdb` 等 |
 
-可用率 16.7%。完整报告见 [GitHub Pages](https://Duckweed-yhb.github.io/moon-hive/)。
+可用率 16.7%。完整报告见 [GitHub Pages](https://Duckweed-yhb.github.io/moon-hive/)，原始数据在 [`reports/`](reports/)。
+
+## 质量基线
+
+| 指标 | 数值 |
+|---|---|
+| MoonBit 源码 | 5,944 行 / 21 个包 |
+| C FFI 平台层 | 1,863 行（fs 774 / http 741 / proc 348） |
+| 单元测试 | **140 个，全绿**（`moon test --target native`） |
+| 跨后端测试 | **87 个 × 3 后端**（`wasm` / `wasm-gc` / `js` 上的库核心） |
+| 第三方运行时依赖 | **0**（仅 `moonbitlang/core` + 自建 C FFI 层） |
+| CI | GitHub Actions，Linux / Windows 双平台矩阵 |
 
 ## 安全
 
@@ -97,14 +157,14 @@ star 数告诉你包火不火，MoonHive 告诉你包能不能用。
 
 ## 已知限制
 
-- 仅支持 native 后端：C FFI 不支持 wasm
-- Windows 下项目路径含中文时用 `build.ps1`（直接 `moon build/run` 会失败）
+- **参考 CLI 仅支持 native 后端**：它需要起子进程、读文件、开 socket（C FFI 不支持 wasm）。**库核心不受此限制**——归因分类器与报告渲染在四个后端都能用
+- Windows 下项目路径含中文时用 `build.ps1`（直接 `moon build/run` 会失败）。`build.ps1` 必须以 UTF-8 **带 BOM** 保存，否则 Windows PowerShell 5.1 会把中文注释按 GBK 解码而解析失败
 - 远端克隆依赖本机 git 的 TLS 后端，`doctor` 可检测并修复
 - 仪表盘仅监听 127.0.0.1，用 `127.0.0.1` 而非 `localhost` 访问
 
 ## 文档
 
-- [架构设计](docs/ARCHITECTURE.md) — 分层边界、九类结论判定逻辑、安全设计
+- [架构设计](docs/ARCHITECTURE.md) — 分层边界与后端可移植性、九类结论判定逻辑、安全设计
 - [开发记录](docs/DEVELOPMENT.md) — 技术取舍与缺陷复盘
 - [贡献指南](CONTRIBUTING.md) · [路线图](ROADMAP.md) · [变更日志](CHANGELOG.md)
 

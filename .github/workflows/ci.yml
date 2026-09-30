@@ -22,13 +22,29 @@ jobs:
       - name: Setup MoonBit
         uses: hustcer/setup-moonbit@v1
 
-      # 本项目依赖 C FFI（进程执行 / 文件系统），只在 native 后端可用。
-      # wasm 后端无法构建，这是架构上的有意选择，详见 docs/ARCHITECTURE.md。
+      # native 是完整交付路径：C FFI（进程执行 / 文件系统）只在这个后端可用，
+      # 因此 CLI（cmd/moonhive）与 platform/*、features/* 都声明 supported_targets=native。
       - name: Build (native)
         run: moon build --target native
 
       - name: Test (native)
         run: moon test --target native
+
+      # 库核心（verify/diagnose、report/*、core/error、platform/time）是纯计算，
+      # 不 import 任何 C FFI 包，声明 supported_targets 覆盖全部四个后端。
+      # 这三步证明「归因引擎是可移植的库」不是文档口号，而是构建期可验证的事实：
+      # 工具链会按 supported_targets 自动排除 CLI 与 platform 层。
+      #
+      # 注意：三步刻意分开写。若合并成一个多行 run 块，windows-latest 上
+      # 会走 PowerShell 而不是 bash，行分隔语义不同，会直接跑挂。
+      - name: Test library core (wasm)
+        run: moon test --target wasm
+
+      - name: Test library core (wasm-gc)
+        run: moon test --target wasm-gc
+
+      - name: Test library core (js)
+        run: moon test --target js
 
       # doctor 依赖真实外网（git ls-remote github.com），在网络波动时
       # 会误报 FAIL，不适合当 CI 门禁。CI 用 version 验证 CLI 可运行即可。

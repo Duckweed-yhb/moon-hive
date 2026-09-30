@@ -1,5 +1,11 @@
 ///|
 /// verify/check — 工具链驱动与验证编排
+///
+/// supported_targets = "native"：本包要起子进程跑 moon，依赖 platform/proc
+/// 的 C FFI。注意它与 verify/diagnose 的区别——diagnose 是纯计算，因此
+/// 可以在所有后端上编译与测试（见 verify/diagnose/moon.pkg 的说明）。
+supported_targets = "native"
+
 import {
   "Duckweed/moon-hive/platform/fs" @fs,
   "Duckweed/moon-hive/platform/proc" @proc,

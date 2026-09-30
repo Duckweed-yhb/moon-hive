@@ -1,5 +1,11 @@
 ///|
 /// verify/workspace — 隔离工作区（目录生命周期、配额、清理）
+///
+/// supported_targets 是**继承**来的：本包依赖 platform/fs 与 platform/proc
+/// 的 C FFI，因此无法在 wasm / js 后端存在。显式声明后，工具链会把这条
+/// 约束传播给依赖本包的一切，而不是等到链接期才报错。
+supported_targets = "native"
+
 import {
   "Duckweed/moon-hive/platform/fs" @fs,
   "Duckweed/moon-hive/platform/proc" @proc,

@@ -1,5 +1,9 @@
 ///|
 /// features/inspect — 单包深度体检
+///
+/// supported_targets = "native"：经 verify/check 继承 platform 层的 C FFI。
+supported_targets = "native"
+
 import {
   "Duckweed/moon-hive/platform/time" @time,
   "Duckweed/moon-hive/verify/check" @check,

@@ -1,3 +1,11 @@
 ///|
 /// verify/diagnose — 诊断分类（纯计算，可离线单测）
+///
+/// supported_targets 显式列出全部四个后端：本包只吃字符串、返回结论，
+/// 不 import 任何 platform 包，因此**没有任何后端限制**。把它写出来，
+/// 是为了让"归因引擎是可移植的纯逻辑"成为构建期可验证的断言，而不是
+/// 文档里的一句口号——CI 会在 wasm / wasm-gc / js / native 上分别编译
+/// 并运行这里的测试。
+supported_targets = "wasm+wasm-gc+js+native"
+
 import {}

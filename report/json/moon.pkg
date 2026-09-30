@@ -1,5 +1,9 @@
 ///|
 /// report/json — 机器可读输出
+///
+/// supported_targets：全后端（理由见 verify/diagnose/moon.pkg）。
+supported_targets = "wasm+wasm-gc+js+native"
+
 import {
   "Duckweed/moon-hive/report/model" @model,
 }

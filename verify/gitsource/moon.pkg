@@ -1,5 +1,9 @@
 ///|
 /// verify/gitsource — 候选仓库发现与克隆
+///
+/// supported_targets = "native"：克隆要起 git 子进程，依赖 platform/proc。
+supported_targets = "native"
+
 import {
   "Duckweed/moon-hive/platform/fs" @fs,
   "Duckweed/moon-hive/platform/proc" @proc,
