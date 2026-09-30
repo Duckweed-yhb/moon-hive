@@ -3,9 +3,11 @@
 [![CI](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml/badge.svg)](https://github.com/Duckweed-yhb/moon-hive/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**MoonBit 工具链输出的诊断归因库**，附带一个参考 CLI。
+**MoonBit 工具链输出的诊断归因库。** 可被任何 MoonBit 项目 import，在 `wasm` / `wasm-gc` / `js` / `native` 四个后端都能编译运行；附带的 CLI 只是它的参考消费者。
 
 给它一段 `moon check` 的输出，它告诉你这堆错误到底意味着什么——是包真的坏了，还是你的工具链版本对不上。
+
+每个快速演进的语言生态最后都会长出这类工具：Rust 有 `cargo-msrv` 与 `cargo-semver-checks`，Java 有 Revapi。**MoonBit 还没有**——这是这个库存在的理由。
 
 ```moonbit
 // 库核心与平台能力完全解耦：这里不 import 任何 C FFI 包
@@ -53,6 +55,38 @@ Failed with 0 warnings, 14 errors.
 ```powershell
 ./build.ps1 -CrossBackend   # => wasm / wasm-gc / js 各 87 测试全绿，native 140
 ```
+
+## 其它语言生态里的对标工具
+
+"这个包在我这套工具链上还能不能编译"是所有快速演进的语言都要单独造工具去回答的问题。MoonBit 现在没有这个工具——这就是 MoonHive 的位置：
+
+| 生态 | 对标工具 | 回答的问题 |
+|---|---|---|
+| Rust | [`cargo-msrv`](https://github.com/foresterre/cargo-msrv) | 一个 crate 的最低支持 Rust 版本是多少（其定义即为"**does compile with a toolchain of a certain version**"） |
+| Rust | [`cargo-semver-checks`](https://github.com/obi1kenobi/cargo-semver-checks) | 新版本是否破坏了 API 兼容性 |
+| Java | [Revapi](https://revapi.org/) | 二进制/源码兼容性是否被破坏 |
+| Python | `caniusepython3` / 各版本 CI 矩阵 | 依赖在目标版本上是否可用 |
+| Node.js | [`npm view`](https://docs.npmjs.com/cli/commands/npm-view) 的 `engines` 字段 | 包声明的运行时版本范围 |
+| **MoonBit** | **MoonHive** | **这个包在本机这套工具链上到底能不能用，失败该归因给谁** |
+
+## 与 MoonBit 生态已有工具的关系
+
+生态里已有一个依赖健康诊断工具 [`Tino-hue/depsight`](https://mooncakes.io/docs/Tino-hue/depsight)（被称作 MoonBit 版的 `cargo audit`）。它和 MoonHive **不重合，因为输入与结论类型都不同**：
+
+| | depsight | MoonHive |
+|---|---|---|
+| 输入 | `moon.mod` / 注册表 / 依赖图元数据 | **真实工具链对真实代码的编译输出** |
+| 手段 | 静态分析、语义化版本比对、SPDX 识别 | 在隔离工作区**真的 clone 下来编译与跑测试** |
+| 输出 | 0–100 健康分（新鲜度/合规/体积/弃用/活跃度） | **九类可行动结论**（能用 / 编译不过 / 工具链不匹配 / 依赖缺失 …） |
+| 回答 | "这个依赖值不值得选" | "这个包在我这套工具链上**能不能用**，失败该怪谁" |
+| 运行环境 | JS 后端（Node.js ≥ 18） | **库核心四个后端通用**，CLI 走 native |
+
+关键区别可以用一句话检验：**一个包在 depsight 上拿 94/100 分，仍然可能在本机编译不过**——因为它考的是依赖健康度，不是可编译性；而工具链版本漂移恰恰是元数据看不出来的。两者互补：depsight 帮你在选型阶段挑依赖，MoonHive 在你踩到"编译失败"时判断这到底是不是包的错。
+
+MoonHive 也是独立的第三方项目，与 MoonBit 官方的 mooncakes.io 发布审计**没有功能重叠**：官方审计的是"包能否正确发布"，MoonHive 审计的是"已发布的包在特定工具链上能否使用"。
+
+
+差别在于归因：上面多数工具假定"编译失败 = 包有问题"，MoonHive 会先判断这次失败是不是**工具链版本差异**造成的假阳性。MoonBit 工具链迭代很快，这个区分是刚需。
 
 ## 结论分类
 
