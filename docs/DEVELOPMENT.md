@@ -76,7 +76,7 @@ C FFI 不支持 wasm 后端，这是硬约束。接受它，是因为 **CLI 的�
 
 **后续修正（2026-09-30）**：上面这条取舍最初被推导成了"整个项目只能 native"，这是过度推广。真正受 C FFI 限制的只有 CLI 链路；**归因分类器、报告渲染、错误契约都是纯计算，本来就与后端无关**。原始取舍的代价因此被低估了：它把一个可移植的库核心连带锁死在 native 上，任何人想在 wasm/js 环境里复用归因能力都不可能。
 
-现在的做法是把边界显式声明出来，交给构建器强制：三个 FFI 包声明 `supported_targets = "native"`，库核心七个包声明四个后端全支持。实测 `moon test --target wasm` 从"整模块无法编译"变为 **87 个用例全绿**。详见 [ARCHITECTURE.md 的分层与边界](ARCHITECTURE.md#后端可移植性是构建期强制的不是文档承诺)。
+现在的做法是把边界显式声明出来，交给构建器强制：三个 FFI 包声明 `supported_targets = "native"`，库核心七个包声明四个后端全支持。实测 `moon test --target wasm` 从"整模块无法编译"变为 **92 个用例全绿**。详见 [ARCHITECTURE.md 的分层与边界](ARCHITECTURE.md#后端可移植性是构建期强制的不是文档承诺)。
 
 ## 四、被实测揪出的真实缺陷
 
@@ -195,12 +195,12 @@ git TLS 后端: 系统默认（未显式指定后端）
 
 **已完成的验证（真实工具链，非模拟）**：
 
-- 构建：0 警告；测试：**140 个用例全绿**（native）
-- **库核心跨后端**：`wasm` / `wasm-gc` / `js` 各 **87 个用例全绿**，边界由 `supported_targets` 构建期强制
+- 构建：0 警告；测试：**145 个用例全绿**（native）
+- **库核心跨后端**：`wasm` / `wasm-gc` / `js` 各 **92 个用例全绿**，边界由 `supported_targets` 构建期强制
 - `survey` 四种结论分类端到端跑通（Verified / DoesNotCompile / NoManifest / Unsafe）
 - `serve` 仪表盘：三个路由实测 200，半开连接防护已修复并实测
 - **CI 双矩阵（Linux / Windows）已实跑且全绿**——其中 `join_path` 按平台选分隔符的修复（2c9968b）就是在 CI 的 Linux 环境下暴露的：GitHub runner 设置了 TEMP，测试目录被拼成含 `\` 的路径，Windows 上没问题、Linux 上目录遍历测试全挂
-- 测试用例数：140（此前 61 → 115 → 124 → 132）
+- 测试用例数：145（此前 61 → 115 → 124 → 132 → 140）
 
 **剩余工作**：
 

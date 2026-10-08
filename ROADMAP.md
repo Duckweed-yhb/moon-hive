@@ -4,15 +4,16 @@ MoonHive 的当前状态与下一步计划。作为新项目，规划是持续�
 
 ## 现状（2026-09）
 
-- ✅ v2 验证引擎：140 测试全绿、构建零警告、零第三方依赖
-- ✅ **库边界构建期强制**：库核心七个包在 `wasm` / `wasm-gc` / `js` / `native` 四个后端都可编译可测试（87 测试 × 3 后端），CLI 链路明确限定 native
+- ✅ v2 验证引擎：145 测试全绿、构建零警告、零第三方依赖
+- ✅ **库边界构建期强制**：库核心七个包在 `wasm` / `wasm-gc` / `js` / `native` 四个后端都可编译可测试（92 测试 × 3 后端），CLI 链路明确限定 native
 - ✅ 真实生态普查：mooncakes 18 包三轮验证（9/25–27），结果完全一致，可用率 16.7%
 - ✅ 报告三格式：Markdown / JSON / 静态 HTML（Pages 在线报告已部署）
 - ✅ 收藏夹：keep / list / forget 三个命令，本地存 favorites.json
 
 ## 短期（2026-10）
 
-- [ ] 发布到 mooncakes.io（生态搜索入口可见）——**库声明可移植之后，这一步的意义从"顺手发个包"变成"让别人真的能 `moon add` 用上归因引擎"**
+- [x] 发布到 mooncakes.io（**0.2.1 已发布**，`moon add Duckweed/moon-hive` 即可使用；发布包已剔除本地探测目录）——**库声明可移植之后，这一步的意义从"顺手发个包"变成"让别人真的能 `moon add` 用上归因引擎"**
+- [x] 真实工具链语料回归：用 `moonc v0.10.14` 固化错误码语料，修复 `[3002] Parse error` 误归为 `ToolchainMismatch` 的缺陷
 - [ ] 公开 API 参考：把 `classify` / `explain` / `evidence` / `count_issues` / `extract_missing_symbols` 的契约写成文档（当前靠 doc comment）
 - [ ] 治理收尾：CONTRIBUTING / ROADMAP 落定（即本文档）
 

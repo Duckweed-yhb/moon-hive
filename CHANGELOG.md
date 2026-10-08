@@ -18,6 +18,12 @@
 
 - **`Parse error` 不再被误判为工具链漂移**：`toolchain_mismatch_markers` 移除 `unexpected token`。语法解析错误是确定的代码错误，不是版本差异；此前含 `unexpected token` 的真实语法错误会被错误归为 `ToolchainMismatch`（已由语料回归测试锁定）
 - `build.ps1` 头部补回 UTF-8 BOM。Windows PowerShell 5.1 会把无 BOM 文件按 ANSI（中文环境为 GBK）解码，中文注释被解成乱码后会直接导致语法解析失败
+- **消除 `derive(Eq, Debug)` 弃用警告**：显式 `pub extend Diagnosis with Eq::{not_equal, equal}` 与 `@moonbitlang/core/debug.Debug::{to_repr}`，`moon.pkg` 显式导入 `moonbitlang/core/debug`，恢复真正 0 警告构建
+- **发布包剔除本地探测目录 `_probe_import`**（已 gitignore、不属交付物），避免打进 mooncakes zip；删除后 native 测试 145、跨后端 92，全绿
+
+### 文档
+
+- 同步实测口径：MoonBit 源码 **5,527 行 / 20 包**（此前文档误写 5,944 / 21）、native 测试 **145**、跨后端 **92**（README / ARCHITECTURE / DEVELOPMENT / CONTRIBUTING / ROADMAP / CHANGELOG 已一致）
 
 ### 变更
 

@@ -19,8 +19,8 @@ MoonHive = **MoonBit 工具链输出的诊断归因库**，附带一个参考 CL
 
 ```powershell
 ./build.ps1                 # 构建
-./build.ps1 -Test           # 构建 + 全部测试（当前 140 个，须保持全绿）
-./build.ps1 -CrossBackend   # 额外验证库核心在 wasm / wasm-gc / js 上可用（各 87 个）
+./build.ps1 -Test           # 构建 + 全部测试（当前 145 个，须保持全绿）
+./build.ps1 -CrossBackend   # 额外验证库核心在 wasm / wasm-gc / js 上可用（各 92 个）
 ./build.ps1 -Run doctor     # 构建 + 运行环境自检
 ```
 

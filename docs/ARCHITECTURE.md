@@ -64,19 +64,19 @@ C FFI（`extern "C"`）在 `wasm` / `wasm-gc` / `js` 后端根本不存在。因
 
 ```
 $ ./build.ps1 -CrossBackend
-==> moon test --target native      Total tests: 140, passed: 140, failed: 0.
-==> moon test --target wasm        Total tests:  87, passed:  87, failed: 0.
-==> moon test --target wasm-gc     Total tests:  87, passed:  87, failed: 0.
-==> moon test --target js          Total tests:  87, passed:  87, failed: 0.
+==> moon test --target native      Total tests: 145, passed: 145, failed: 0.
+==> moon test --target wasm        Total tests:  92, passed:  92, failed: 0.
+==> moon test --target wasm-gc     Total tests:  92, passed:  92, failed: 0.
+==> moon test --target js          Total tests:  92, passed:  92, failed: 0.
 ```
 
-87 就是库核心包内的测试总数；剩下的 53 个测试属于 CLI 链路（工作区生命周期、克隆、工具链编排），它们本质上是 native 侧的能力，不宣称可移植。
+92 就是库核心包内的测试总数；剩下的 53 个测试属于 CLI 链路（工作区生命周期、克隆、工具链编排），它们本质上是 native 侧的能力，不宣称可移植。
 
 ### 三条可替换性声明
 
 1. **只有 `platform/*` 中的三个包出现 C FFI。** 想换掉底层实现（例如改用别的进程 API、或把文件操作换成第三方库），只需替换这一层，`verify/` 与 `features/` 一行不动。
 2. **只有 `verify/check` 知道怎么调用 `moon` 命令。** 工具链的调用方式（参数、超时、输出解析）全部收敛在这一个文件里。
-3. **`core/`、`verify/diagnose` 与 `report/` 不知道文件系统与进程的存在。** 它们只吃字符串、返回结论，因此能做到 100% 离线单元测试——测试数能一路涨到 140，靠的就是这条边界。这条边界现在还有第二重收益：**它们因此可以在全部四个后端上编译并测试**。
+3. **`core/`、`verify/diagnose` 与 `report/` 不知道文件系统与进程的存在。** 它们只吃字符串、返回结论，因此能做到 100% 离线单元测试——测试数能一路涨到 145，靠的就是这条边界。这条边界现在还有第二重收益：**它们因此可以在全部四个后端上编译并测试**。
 
 
 ### 为什么会有 `platform/` 这一层

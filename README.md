@@ -173,7 +173,7 @@ MoonHive 也是独立的第三方项目，与 MoonBit 官方的 mooncakes.io 发
 
 | 指标 | 数值 |
 |---|---|
-| MoonBit 源码 | 5,944 行 / 21 个包 |
+| MoonBit 源码 | 5,527 行 / 20 个包 |
 | C FFI 平台层 | 1,863 行（fs 774 / http 741 / proc 348） |
 | 单元测试 | **145 个，全绿**（`moon test --target native`） |
 | 跨后端测试 | **92 个 × 3 后端**（`wasm` / `wasm-gc` / `js` 上的库核心） |
