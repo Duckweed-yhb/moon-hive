@@ -113,6 +113,23 @@ MoonHive 也是独立的第三方项目，与 MoonBit 官方的 mooncakes.io 发
 - **收藏夹**：`keep` / `list` / `forget` 收藏验证过的包，本地存 `favorites.json`
 - **报告对比**：`report/compare` 模块对比两轮验证结果，区分好转（不可用→可用）、恶化（可用→不可用）、新增、消失
 
+## 安装（作为库）
+
+归因引擎已发布到 mooncakes.io（`Duckweed/moon-hive@0.2.1`）。在任何 MoonBit 项目里即可安装：
+
+```bash
+moon add Duckweed/moon-hive
+```
+
+然后 import 库核心包：
+
+```moonbit
+import "Duckweed/moon-hive/verify/diagnose" @diagnose
+import "Duckweed/moon-hive/report/model" @model
+```
+
+`verify/diagnose` 与 `report/*` 是纯计算包，可在 `wasm` / `wasm-gc` / `js` / `native` 四个后端使用；CLI 及其依赖的 C FFI 平台层仅在 `native`。
+
 ## 快速开始
 
 ### 环境要求
