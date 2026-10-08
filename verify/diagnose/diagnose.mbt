@@ -126,6 +126,11 @@ pub fn is_usable(d : Diagnosis) -> Bool {
 ///   - 把工具链问题判成包的问题 → 冤枉了生态里健康的库
 ///   - 把包的问题判成工具链问题 → 掩盖了真实的坏包
 /// 因此特征串必须具体，宁可保守（判为 DoesNotCompile）也不滥用。
+///
+/// 用真实 moonc 输出校准过（见测试区"真实 moonc 输出语料回归"）：
+/// 刻意**不含** `unexpected token` 等语法解析措辞——`Parse error` 是确定的
+/// 代码错误，不是工具链版本漂移；把它们列入会把真实语法错误误判为
+/// ToolchainMismatch。
 fn toolchain_mismatch_markers() -> Array[String] {
   [
     "has no method",
@@ -138,7 +143,6 @@ fn toolchain_mismatch_markers() -> Array[String] {
     "unsupported target",
     "no such field",
     "not found in type",
-    "unexpected token",   // 语法层面的漂移同样常见于版本差异
   ]
 }
 
@@ -826,4 +830,56 @@ test "enrich_evidence 在证据前加统计和缺失符号" {
 test "enrich_evidence 无错误统计时不加前缀" {
   let e = enrich_evidence("some error", "no summary here")
   assert_eq(e, "some error")
+}
+
+// ---------- 真实 moonc 输出语料回归 ----------
+//
+// 以下语料来自本机 moonc v0.10.14 对故意写坏的代码真实编译的输出
+// （含稳定错误码 [NNNN] 与措辞），用于锁定分类行为：
+// 特征库不是凭空编的措辞清单，而是能被真实工具链输出验证的行为契约。
+// 补强意图：语法解析错误是确定的代码问题，不得被误归为工具链漂移。
+
+test "真实语料: [3002] Parse error → DoesNotCompile（不是工具链漂移）" {
+  let text = "Error: [3002]\nParse error, unexpected token `?`, you may expect a statement or expression on a new line, or `}` to close the block."
+  let o = { ..base_outcome(), check: fail_out(text) }
+  match classify(o) {
+    DoesNotCompile(m) => assert_true(m.contains("Parse error"))
+    other => fail("真实语法错误不应判为工具链漂移，实际 " + label(other))
+  }
+}
+
+test "真实语料: [4074] 缺返回类型标注 → DoesNotCompile" {
+  let text = "Error: [4074]\nMissing type annotation for the return value."
+  let o = { ..base_outcome(), check: fail_out(text) }
+  match classify(o) {
+    DoesNotCompile(m) => assert_true(m.contains("Missing type annotation"))
+    other => fail("应为 DoesNotCompile，实际 " + label(other))
+  }
+}
+
+test "真实语料: [4080] 函数参数个数不符 → DoesNotCompile" {
+  let text = "Error: [4080]\nThis function has type (Int) -> Bytes, which requires 1 arguments, but is given 0 arguments."
+  let o = { ..base_outcome(), check: fail_out(text) }
+  match classify(o) {
+    DoesNotCompile(m) => assert_true(m.contains("This function has type"))
+    other => fail("应为 DoesNotCompile，实际 " + label(other))
+  }
+}
+
+test "真实语料: [4139] 值不能被隐式忽略 → DoesNotCompile" {
+  let text = "Error: [4139]\nThis expression has type BytesView, its value cannot be implicitly ignored (hint: use `ignore(...)` or `let _ = ...` to explicitly ignore it)."
+  let o = { ..base_outcome(), check: fail_out(text) }
+  match classify(o) {
+    DoesNotCompile(m) => assert_true(m.contains("cannot be implicitly ignored"))
+    other => fail("应为 DoesNotCompile，实际 " + label(other))
+  }
+}
+
+test "真实语料: [4015] Type has no method → ToolchainMismatch" {
+  let text = "Error: [4015]\nType Bytes has no method not_exist_method."
+  let o = { ..base_outcome(), check: fail_out(text) }
+  match classify(o) {
+    ToolchainMismatch(m) => assert_true(m.contains("not_exist_method"))
+    other => fail("应为 ToolchainMismatch，实际 " + label(other))
+  }
 }
