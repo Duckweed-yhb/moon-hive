@@ -35,6 +35,10 @@ pub(all) enum Diagnosis {
   FetchFailed(String)
 } derive(Eq, Debug)
 
+// 显式声明 trait 方法提升，避免新版工具链 implicit_impl_as_method 弃用警告
+pub extend Diagnosis with Eq::{not_equal, equal}
+pub extend Diagnosis with @moonbitlang/core/debug.Debug::{to_repr}
+
 ///|
 /// 一次命令的结果（诊断分类的输入）
 pub(all) struct CommandOutcome {

@@ -8,4 +8,6 @@
 /// 并运行这里的测试。
 supported_targets = "wasm+wasm-gc+js+native"
 
-import {}
+import {
+  "moonbitlang/core/debug"
+}
