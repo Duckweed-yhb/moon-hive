@@ -27,6 +27,8 @@
 #include <wchar.h>
 #define MKDIR(p) _mkdir(p)
 #define RMDIR(p) _rmdir(p)
+#define WMKDIR(p) _wmkdir(p)
+#define WRMDIR(p) _wrmdir(p)
 #else
 #include <dirent.h>
 #include <unistd.h>
@@ -112,6 +114,26 @@ static int32_t fs_kind_c(const char *p) {
   return FS_OTHER;
 }
 
+#ifdef _WIN32
+/* Windows 宽字符版路径类型判断。
+   仓库可能位于含非 ASCII 字符（中文目录）的路径；A 版 fs_str_to_ascii
+   会把中文字符替换成 '?'，stat 必然失败。MoonBit String 内存是 UTF-16，
+   Windows wchar_t 同为 UTF-16，直接逐单元拷贝后调用 _wstat 即可。 */
+static int32_t fs_kind_w(const wchar_t *p) {
+  struct _stat st;
+  if (_wstat(p, &st) != 0) {
+    return FS_NONE;
+  }
+  if (st.st_mode & _S_IFDIR) {
+    return FS_DIR;
+  }
+  if (st.st_mode & _S_IFREG) {
+    return FS_FILE;
+  }
+  return FS_OTHER;
+}
+#endif
+
 /* 去掉路径末尾分隔符后拼接子项，统一用平台分隔符 */
 #ifdef _WIN32
 #define FS_SEP "\\"
@@ -126,12 +148,27 @@ static void fs_join(char *dst, int32_t cap, const char *dir, const char *name) {
 /* ---------- 路径查询 ---------- */
 
 int32_t fs_path_kind(moonbit_string_t path) {
+#ifdef _WIN32
+  int32_t n = (int32_t)Moonbit_array_length(path);
+  wchar_t *wp = (wchar_t *)malloc(((size_t)n + 1) * sizeof(wchar_t));
+  if (wp == NULL) {
+    return FS_NONE;
+  }
+  for (int32_t i = 0; i < n; i++) {
+    wp[i] = (wchar_t)path[i];
+  }
+  wp[n] = 0;
+  int32_t kind = fs_kind_w(wp);
+  free(wp);
+  return kind;
+#else
   char p[FS_MAX_PATH];
   fs_str_to_ascii(path, p, (int32_t)sizeof(p));
   if (p[0] == 0) {
     return FS_NONE;
   }
   return fs_kind_c(p);
+#endif
 }
 
 int32_t fs_is_dir(moonbit_string_t path) {
@@ -148,6 +185,27 @@ int32_t fs_exists(moonbit_string_t path) {
 
 /* 文件字节大小；目录或不存在返回 -1 */
 int64_t fs_file_size(moonbit_string_t path) {
+#ifdef _WIN32
+  int32_t n = (int32_t)Moonbit_array_length(path);
+  wchar_t *wp = (wchar_t *)malloc(((size_t)n + 1) * sizeof(wchar_t));
+  if (wp == NULL) {
+    return -1;
+  }
+  for (int32_t i = 0; i < n; i++) {
+    wp[i] = (wchar_t)path[i];
+  }
+  wp[n] = 0;
+  struct _stat st;
+  if (_wstat(wp, &st) != 0) {
+    free(wp);
+    return -1;
+  }
+  free(wp);
+  if (!(st.st_mode & _S_IFREG)) {
+    return -1;
+  }
+  return (int64_t)st.st_size;
+#else
   char p[FS_MAX_PATH];
   fs_str_to_ascii(path, p, (int32_t)sizeof(p));
   struct stat st;
@@ -158,6 +216,7 @@ int64_t fs_file_size(moonbit_string_t path) {
     return -1;
   }
   return (int64_t)st.st_size;
+#endif
 }
 
 /* ---------- 目录创建 ---------- */
@@ -192,10 +251,74 @@ static int32_t mkdir_all_c(char *p) {
   return 0;
 }
 
+#ifdef _WIN32
+/* Windows 宽字符版递归创建目录。仓库可能位于含中文（非 ASCII）的路径，
+   A 版 fs_str_to_ascii 会把中文字符替换成 '?'，_mkdir 必然失败。 */
+static void fs_strip_trailing_sep_w(wchar_t *p) {
+  int32_t n = (int32_t)wcslen(p);
+  while (n > 1 && (p[n - 1] == L'/' || p[n - 1] == L'\\')) {
+    if (n == 3 && p[1] == L':') {
+      break;
+    }
+    p[n - 1] = 0;
+    n--;
+  }
+}
+
+static int32_t mkdir_all_w(const wchar_t *path) {
+  int32_t len = (int32_t)wcslen(path);
+  if (len == 0) {
+    return -1;
+  }
+  wchar_t *p = (wchar_t *)malloc(((size_t)len + 1) * sizeof(wchar_t));
+  if (p == NULL) {
+    return -1;
+  }
+  wcscpy(p, path);
+  fs_strip_trailing_sep_w(p);
+  len = (int32_t)wcslen(p);
+
+  for (int32_t i = 1; i < len; i++) {
+    if (p[i] == L'/' || p[i] == L'\\') {
+      if (i == 2 && p[1] == L':') {
+        continue;
+      }
+      wchar_t saved = p[i];
+      p[i] = 0;
+      if (p[0] != 0) {
+        WMKDIR(p);
+      }
+      p[i] = saved;
+    }
+  }
+  int32_t rc = -1;
+  if (WMKDIR(p) == 0 || fs_kind_w(p) == FS_DIR) {
+    rc = 0;
+  }
+  free(p);
+  return rc;
+}
+#endif
+
 int32_t fs_mkdir_all(moonbit_string_t path) {
+#ifdef _WIN32
+  int32_t n = (int32_t)Moonbit_array_length(path);
+  wchar_t *wp = (wchar_t *)malloc(((size_t)n + 1) * sizeof(wchar_t));
+  if (wp == NULL) {
+    return -1;
+  }
+  for (int32_t i = 0; i < n; i++) {
+    wp[i] = (wchar_t)path[i];
+  }
+  wp[n] = 0;
+  int32_t rc = mkdir_all_w(wp);
+  free(wp);
+  return rc;
+#else
   char p[FS_MAX_PATH];
   fs_str_to_ascii(path, p, (int32_t)sizeof(p));
   return mkdir_all_c(p);
+#endif
 }
 
 /* ---------- 递归删除（内部用纯 C 字符串） ---------- */
@@ -339,9 +462,23 @@ static moonbit_string_t utf8_bytes_to_mbt_str(const char *src, int32_t len) {
 
 /* 读取文本文件（按 UTF-8 解码）。不存在或不可读返回空串。 */
 moonbit_string_t fs_read_text(moonbit_string_t path) {
+#ifdef _WIN32
+  int32_t pn = (int32_t)Moonbit_array_length(path);
+  wchar_t *wp = (wchar_t *)malloc(((size_t)pn + 1) * sizeof(wchar_t));
+  if (wp == NULL) {
+    return moonbit_make_string(0, 0);
+  }
+  for (int32_t i = 0; i < pn; i++) {
+    wp[i] = (wchar_t)path[i];
+  }
+  wp[pn] = 0;
+  FILE *f = _wfopen(wp, L"rb");
+  free(wp);
+#else
   char p[FS_MAX_PATH];
   fs_str_to_ascii(path, p, (int32_t)sizeof(p));
   FILE *f = fopen(p, "rb");
+#endif
   if (f == NULL) {
     return moonbit_make_string(0, 0);
   }

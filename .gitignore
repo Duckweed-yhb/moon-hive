@@ -8,6 +8,7 @@ _probe_import/
 # Local scratch / debug probes (never part of the deliverable)
 _bom_probe.txt
 __probe*
+_probe_fs/
 
 # Runtime data (personal favorites, not for public repo)
 favorites.json

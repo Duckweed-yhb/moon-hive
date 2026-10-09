@@ -305,3 +305,17 @@ test "count_files 与 list_files 结果一致" {
   assert_eq(count_files(d, ".zig", 4), 0)
   assert_true(rm_rf(d))
 }
+
+test "Windows 中文路径可被识别与读写（UTF-16 回归）" {
+  let d = test_dir("cn")
+  let cn_dir = @proc.join_path(d, "竞赛目录-中文")
+  assert_true(mkdir_all(cn_dir))
+  assert_true(is_dir(cn_dir))
+  assert_true(exists(cn_dir))
+  let f = @proc.join_path(cn_dir, "文档.md")
+  assert_true(write_file(f, "中文内容"))
+  assert_eq(path_kind(f), File)
+  assert_true(file_size(f) > 0L)
+  assert_eq(read_text(f), "中文内容")
+  assert_true(rm_rf(d))
+}

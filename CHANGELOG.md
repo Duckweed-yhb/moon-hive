@@ -2,6 +2,16 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/) 风格，版本号遵循语义化版本。
 
+## [0.2.2] - 2026-10
+
+### 修复
+
+- **Windows 中文路径全面支持（`platform/fs`）**：`fs_path_kind`（驱动 `is_dir` / `is_file` / `exists`）、`fs_file_size`、`fs_read_text` 此前走 `fs_str_to_ascii` + `stat`/`fopen`，路径中的非 ASCII 字符（如中文目录名）会被替换成 `'?'` 导致判断/读取必然失败；`fs_write_text` 却已有 `_WIN32` 宽字符分支，两侧处理不一致。本次为这三个函数补上与 `fs_write_text` 一致的 Windows 宽字符（`_wstat` / `_wfopen`）分支，仓库位于含中文的目录下也能正常验证。此为真实缺陷修复（此前已在含中文路径的项目上验证失败）。
+
+### 质量基线
+
+- native 测试 145 全绿（含中文路径回归验证）
+
 ## [Unreleased]
 
 把项目定位从"一个 CLI 工具"修正为"**可移植的诊断归因库 + 仅 native 的参考 CLI**"，并把这条边界交给构建器强制。
