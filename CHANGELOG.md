@@ -2,6 +2,16 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/) 风格，版本号遵循语义化版本。
 
+## [0.2.3] - 2026-10
+
+### 修复
+
+- **`copy_tree` / `copy_file` 补上 Windows 宽字符分支**：本地候选验证依赖把用户已有 checkout 复制进隔离工作区。`copy_tree` 的 Windows 分支此前用 `FindFirstFileA` + `fopen`，仓库位于含中文（非 ASCII）路径时复制必然失败（`verify_candidate` 因此对本地中文路径返回 `FetchFailed`）。本次为 `copy_tree` / `copy_file` 补上与 `write_text` 一致的宽字符分支（`FindFirstFileW` / `_wfopen`），并在中文路径回归测试中覆盖"复制含中文目录树"场景。
+
+### 质量基线
+
+- native 测试 146 全绿（含 copy_tree 中文复制回归）
+
 ## [0.2.2] - 2026-10
 
 ### 修复
@@ -10,7 +20,7 @@
 
 ### 质量基线
 
-- native 测试 145 全绿（含中文路径回归验证）
+- native 测试 146 全绿（含中文路径回归验证）
 
 ## [Unreleased]
 

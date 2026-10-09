@@ -317,5 +317,12 @@ test "Windows 中文路径可被识别与读写（UTF-16 回归）" {
   assert_eq(path_kind(f), File)
   assert_true(file_size(f) > 0L)
   assert_eq(read_text(f), "中文内容")
+
+  // 复制含中文的目录树到另一个含中文的目标目录，确认 copy_tree 走宽字符分支
+  let dst = @proc.join_path(d, "目标目录-副本")
+  assert_true(copy_tree(cn_dir, dst))
+  assert_true(is_dir(dst))
+  assert_eq(read_text(@proc.join_path(dst, "文档.md")), "中文内容")
+
   assert_true(rm_rf(d))
 }
