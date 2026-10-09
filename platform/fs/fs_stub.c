@@ -403,8 +403,73 @@ static int32_t fs_rm_rf_c(const char *p) {
 #endif
 }
 
+#ifdef _WIN32
+/* Windows 宽字符版递归删除目录。A 版 fs_rm_rf_c 用 FindFirstFileA + remove +
+   _rmdir，对含中文路径删除必然失败（真实目录是中文名，A 版 '?' 路径找不到）。
+   宽字符版用 FindFirstFileW + _wremove + _wrmdir，与 path_kind/file_size/
+   read_text 的宽字符分支一致。 */
+static int32_t fs_rm_rf_w(const wchar_t *p) {
+  int32_t kind = fs_kind_w(p);
+  if (kind == FS_NONE) {
+    return 0; /* 不存在视为已删除 */
+  }
+  if (kind != FS_DIR) {
+    return (_wremove(p) == 0) ? 0 : -1;
+  }
+  int32_t plen = (int32_t)wcslen(p);
+  wchar_t *pattern = (wchar_t *)malloc(((size_t)plen + 8) * sizeof(wchar_t));
+  if (pattern == NULL) {
+    return -1;
+  }
+  swprintf(pattern, (size_t)plen + 8, L"%s\\*", p);
+  WIN32_FIND_DATAW fd;
+  HANDLE h = FindFirstFileW(pattern, &fd);
+  free(pattern);
+  if (h != INVALID_HANDLE_VALUE) {
+    do {
+      if (wcscmp(fd.cFileName, L".") == 0 || wcscmp(fd.cFileName, L"..") == 0) {
+        continue;
+      }
+      int32_t clen = (int32_t)(wcslen(p) + wcslen(fd.cFileName) + 8);
+      wchar_t *child = (wchar_t *)malloc(((size_t)clen) * sizeof(wchar_t));
+      if (child == NULL) {
+        break;
+      }
+      swprintf(child, (size_t)clen, L"%s\\%s", p, fd.cFileName);
+      fs_rm_rf_w(child);
+      free(child);
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+  }
+  return (WRMDIR(p) == 0) ? 0 : -1;
+}
+#endif
+
 /* 递归删除目录。为防误删，拒绝过短路径与驱动器根。 */
 int32_t fs_rm_rf(moonbit_string_t path) {
+#ifdef _WIN32
+  int32_t pn = (int32_t)Moonbit_array_length(path);
+  wchar_t *wp = (wchar_t *)malloc(((size_t)pn + 1) * sizeof(wchar_t));
+  if (wp == NULL) {
+    return -2;
+  }
+  for (int32_t i = 0; i < pn; i++) {
+    wp[i] = (wchar_t)path[i];
+  }
+  wp[pn] = 0;
+  int32_t plen = (int32_t)wcslen(wp);
+  if (plen < 4) {
+    free(wp);
+    return -2;
+  }
+  if (plen == 2 && wp[1] == L':') {
+    free(wp);
+    return -2;
+  }
+  int32_t rc = fs_rm_rf_w(wp);
+  free(wp);
+  return rc;
+#else
   char p[FS_MAX_PATH];
   fs_str_to_ascii(path, p, (int32_t)sizeof(p));
   fs_strip_trailing_sep(p);
@@ -413,12 +478,8 @@ int32_t fs_rm_rf(moonbit_string_t path) {
   if (len < 4) {
     return -2;
   }
-#ifdef _WIN32
-  if (len == 2 && p[1] == ':') {
-    return -2;
-  }
-#endif
   return fs_rm_rf_c(p);
+#endif
 }
 
 /* ---------- 文件读写 ---------- */

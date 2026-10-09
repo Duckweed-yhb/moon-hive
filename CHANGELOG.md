@@ -6,6 +6,7 @@
 
 ### 修复
 
+- **`rm_rf` 补上 Windows 宽字符分支**：A 版用 `FindFirstFileA` + `remove` + `_rmdir`，对含中文路径删除必然失败（真实目录是中文名，A 版 `'?'` 路径找不到）。宽字符版用 `FindFirstFileW` + `_wremove` + `_wrmdir` 递归删除，与 `path_kind` / `file_size` / `read_text` 的宽字符分支一致。此前本地（GBK 代码页）恰好能删、CI（UTF-8 代码页）必失败的差异由此消除。
 - **非 Windows 平台的中文路径真正可用（`fs_str_to_ascii` UTF-8 编码）**：此前 `fs_str_to_ascii` 把所有非 ASCII 字符（含中文）替换成 `'?'`，导致 Linux / macOS 上含中文目录的本地候选 `copy_tree` 复制失败、整个路径层语义失真（实测 CI 中"复制含中文目录树"回归失败）。本次在非 Windows 分支将 MoonBit String（UTF-16，含代理对）真正编码为 UTF-8 字节，使中文路径在 POSIX 文件系统上原生可用——`mkdir_all` / `write_file` / `read_text` / `copy_tree` 等全部路径函数一并受益。
 
 ### 质量基线
