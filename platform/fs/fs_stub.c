@@ -372,7 +372,7 @@ moonbit_string_t fs_read_text(moonbit_string_t path) {
 /* 把 MoonBit 字符串按 UTF-8 编码写入文件（覆盖写）。成功返回 0。 */
 int32_t fs_write_text(moonbit_string_t path, moonbit_string_t content) {
 #ifdef _WIN32
-  /* Windows：仓库可能位于中文路径（如 E:\future\yhb\03-竞赛\...）。A 版
+  /* Windows：仓库可能位于含非 ASCII 字符的路径（中文目录）。A 版
      fopen 的路径经 fs_str_to_ascii 转换后，中文被替换成 '?'，写文件必然失败。
      MoonBit String 的内存是 UTF-16（uint16_t 数组），Windows wchar_t 同为
      UTF-16——直接逐单元拷贝即可，无需编码转换。 */

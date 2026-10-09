@@ -4,9 +4,9 @@
 # 为什么需要这个脚本：
 #   本项目依赖 C FFI，走 native 后端。在 Windows 上，native 后端会调用
 #   GNU assembler，而**汇编器无法处理含非 ASCII 字符的路径**。若仓库位于
-#   中文目录下（例如 E:\future\yhb\03-竞赛\moon-hive），直接 `moon build`
+#   中文目录下（仓库路径含非 ASCII 字符，例如放在带「竞赛」的目录），直接 `moon build`
 #   会失败：
-#       Fatal error: can't create E:\future\yhb\03-????\...: No such file or directory
+#       Fatal error: can't create <path-with-non-ascii>\...: No such file or directory
 #
 #   本脚本把构建产物重定向到一个纯 ASCII 的目录，从而绕过该限制。
 #   这不改变任何源码，只改产物落盘位置。
