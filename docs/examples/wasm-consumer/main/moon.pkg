@@ -1,0 +1,6 @@
+pkgtype(kind: "library")
+supported_targets = "all"
+
+import {
+  "Duckweed/moon-hive/verify/diagnose" @diagnose,
+}

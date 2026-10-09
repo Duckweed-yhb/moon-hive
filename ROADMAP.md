@@ -14,13 +14,13 @@ MoonHive 的当前状态与下一步计划。作为新项目，规划是持续�
 
 - [x] 发布到 mooncakes.io（**0.2.1 已发布**，`moon add Duckweed/moon-hive` 即可使用；发布包已剔除本地探测目录）——**库声明可移植之后，这一步的意义从"顺手发个包"变成"让别人真的能 `moon add` 用上归因引擎"**
 - [x] 真实工具链语料回归：用 `moonc v0.10.14` 固化错误码语料，修复 `[3002] Parse error` 误归为 `ToolchainMismatch` 的缺陷
-- [ ] 公开 API 参考：把 `classify` / `explain` / `evidence` / `count_issues` / `extract_missing_symbols` 的契约写成文档（当前靠 doc comment）
+- [x] 公开 API 参考：`docs/API.md` 已把 `classify` / `explain` / `evidence` / `count_issues` / `extract_missing_symbols` 等核心 API 契约写成文档（含类型、签名、判定顺序与完整示例）
 - [ ] 治理收尾：CONTRIBUTING / ROADMAP 落定（即本文档）
 
 ## 中期
 
 - [ ] **库与 CLI 拆成两个模块**（`moon.work` 工作区）：目前靠 `supported_targets` 在同一模块内划边界，已能满足"库核心可移植"；进一步拆成独立模块后，消费方可以只 `moon add` 纯核心、完全不把 CLI 与 C FFI 拉进依赖图
-- [ ] **一个非 native 消费者的最小示例**：在 wasm/js 环境里直接调用 `classify`，证明库脱离 CLI 也能用
+- [x] **一个非 native 消费者的最小示例**：`docs/examples/wasm-consumer/`——独立 `moon add Duckweed/moon-hive` 后直接调用 `classify`，已在 `wasm` / `js` / `native` 三后端实测 2 测试全过，证明库脱离 CLI 也能用
 - [ ] **多工具链对比**：同一包在不同 moon 版本上验证，用数据区分"包坏了"与"工具链演进"
 - [ ] **趋势追踪**：定时运行 survey，追踪生态包可用性随时间的变化
 - [ ] **网页 Badge**：像 shields.io 那样给每个 mooncakes 包提供验证状态标识

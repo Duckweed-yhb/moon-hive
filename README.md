@@ -130,6 +130,8 @@ import "Duckweed/moon-hive/report/model" @model
 
 `verify/diagnose` 与 `report/*` 是纯计算包，可在 `wasm` / `wasm-gc` / `js` / `native` 四个后端使用；CLI 及其依赖的 C FFI 平台层仅在 `native`。
 
+**非 native 消费者最小示例**：见 [`docs/examples/wasm-consumer/`](docs/examples/wasm-consumer/README.md)——独立 `moon add Duckweed/moon-hive` 后直接调用 `classify`，`wasm` / `js` / `native` 三后端实测 2 测试全过，证明库脱离 CLI 独立可用。
+
 ## 快速开始
 
 ### 环境要求
@@ -216,6 +218,7 @@ import "Duckweed/moon-hive/report/model" @model
 ## 文档
 
 - [架构设计](docs/ARCHITECTURE.md) — 分层边界与后端可移植性、九类结论判定逻辑、安全设计
+- [库 API 参考](docs/API.md) — `verify/diagnose` 公开 API 契约（类型、签名、判定顺序、完整示例）
 - [开发记录](docs/DEVELOPMENT.md) — 技术取舍与缺陷复盘
 - [贡献指南](CONTRIBUTING.md) · [路线图](ROADMAP.md) · [变更日志](CHANGELOG.md)
 

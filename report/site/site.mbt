@@ -37,39 +37,56 @@ pub fn escape_html(s : String) -> String {
 }
 
 ///|
-/// 内联样式表。
+/// 内联样式表（Linear 深色设计语言 + MoonBit 月兔玫红品牌色）。
 /// 职责：**让结论一眼可读**——颜色区分结论、占比条表达分布、窄屏不破版。
+/// 保持零依赖：单文件内联，可直接托管 GitHub Pages / 离线打开。
 pub fn stylesheet() -> String {
-  "body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:960px;margin:0 auto;padding:20px 20px 32px;line-height:1.6;color:#1a1a1a;background:#fff}\n" +
-  "h1{font-size:1.7rem;margin:0 0 4px}\n" +
-  ".sub{color:#666;font-size:.92rem;margin-bottom:16px}\n" +
-  "nav{font-size:.85rem;color:#57606a;margin:0 0 16px}\n" +
-  "nav a{color:#0969da;text-decoration:none;margin-right:12px}\n" +
-  ".hero{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;background:linear-gradient(135deg,#f6f8fa,#eef1f4);border:1px solid #e5e5e5;border-radius:10px;padding:16px 20px;margin:14px 0 6px}\n" +
-  ".hero .n{font-size:2.2rem;font-weight:700;color:#1a7f37;line-height:1}\n" +
-  ".hero .t{font-size:1rem;color:#24292f}\n" +
-  ".hero .s{flex-basis:100%;font-size:.85rem;color:#57606a}\n" +
-  ".env{background:#f7f7f8;border:1px solid #e5e5e5;border-radius:8px;padding:12px 16px;margin:12px 0 6px;font-size:.9rem}\n" +
+  "body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:960px;margin:0 auto;padding:20px 20px 32px;line-height:1.6;color:#f2f2f5;background:#0a0a0e}\n" +
+  ".brand{display:flex;align-items:center;gap:8px;font-size:1.05rem;font-weight:600;color:#f2f2f5}\n" +
+  "h1{font-size:1.7rem;margin:10px 0 4px}\n" +
+  ".sub{color:#a8a8b3;font-size:.92rem;margin-bottom:16px}\n" +
+  "nav{font-size:.85rem;color:#a8a8b3;margin:0 0 16px}\n" +
+  "nav a{color:#e0147c;text-decoration:none;margin-right:12px}\n" +
+  ".hero{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;background:#141419;border:1px solid #26262e;border-radius:12px;padding:16px 20px;margin:14px 0 6px}\n" +
+  ".hero .n{font-size:2.2rem;font-weight:700;color:#e0147c;line-height:1}\n" +
+  ".hero .t{font-size:1rem;color:#f2f2f5}\n" +
+  ".hero .s{flex-basis:100%;font-size:.85rem;color:#a8a8b3}\n" +
+  ".env{background:#141419;border:1px solid #26262e;border-radius:8px;padding:12px 16px;margin:12px 0 6px;font-size:.9rem}\n" +
   ".env div{margin:2px 0}\n" +
-  ".env code{background:#fff;padding:1px 6px;border-radius:3px;border:1px solid #e5e5e5}\n" +
+  ".env code{background:#202027;padding:1px 6px;border-radius:4px;border:1px solid #26262e}\n" +
   ".stats{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0 4px}\n" +
-  ".stat{flex:1 1 130px;min-width:0;border:1px solid #e5e5e5;border-radius:10px;padding:12px 16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}\n" +
-  ".stat .n{font-size:1.5rem;font-weight:600}\n" +
-  ".stat .l{font-size:.8rem;color:#666}\n" +
-  "h2{font-size:1.2rem;margin:30px 0 12px;border-bottom:1px solid #e5e5e5;padding-bottom:8px;scroll-margin-top:8px}\n" +
+  ".stat{flex:1 1 130px;min-width:0;background:#141419;border:1px solid #26262e;border-radius:12px;padding:12px 16px}\n" +
+  ".stat .n{font-size:1.5rem;font-weight:600;color:#f2f2f5}\n" +
+  ".stat .l{font-size:.8rem;color:#6f6f7a}\n" +
+  "h2{font-size:1.2rem;margin:30px 0 12px;border-bottom:1px solid #26262e;padding-bottom:8px;scroll-margin-top:8px;color:#f2f2f5}\n" +
   "table{border-collapse:collapse;width:100%;font-size:.9rem}\n" +
-  "th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #eee;vertical-align:top}\n" +
-  "th{background:#fafafa;font-weight:600}\n" +
+  "th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #1f1f26;vertical-align:top}\n" +
+  "th{background:#141419;font-weight:600;color:#a8a8b3}\n" +
   "code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.85em}\n" +
-  ".ev{color:#57606a;font-size:.83em;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-break:keep-all}\n" +
-  ".bar{background:#eef1f4;border-radius:5px;height:8px;min-width:80px;overflow:hidden}\n" +
+  ".ev{color:#6f6f7a;font-size:.83em;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;word-break:keep-all}\n" +
+  ".bar{background:#202027;border-radius:5px;height:8px;min-width:80px;overflow:hidden}\n" +
   ".fill{height:100%;border-radius:5px}\n" +
-  ".tbl-wrap{overflow-x:auto}\n" +
-  ".ok{color:#1a7f37}.warn{color:#9a6700}.bad{color:#cf222e}\n" +
-  ".c-verified{color:#1a7f37}.c-testfailing{color:#9a6700}.c-toolchainmismatch{color:#9a6700}.c-missingdependency{color:#bc4c00}.c-doesnotcompile{color:#cf222e}.c-nomanifest{color:#bc4c00}.c-timedout{color:#57606a}.c-unsafe{color:#8250df}.c-fetchfailed{color:#57606a}\n" +
-  ".fill-verified{background:#1a7f37}.fill-testfailing{background:#d4a72c}.fill-toolchainmismatch{background:#d4a72c}.fill-missingdependency{background:#bc4c00}.fill-doesnotcompile{background:#cf222e}.fill-nomanifest{background:#bc4c00}.fill-timedout{background:#8b949e}.fill-unsafe{background:#8250df}.fill-fetchfailed{background:#8b949e}\n" +
-  "footer{margin-top:36px;padding-top:12px;border-top:1px solid #e5e5e5;color:#666;font-size:.85rem}\n" +
+  ".tbl-wrap{overflow-x:auto;background:#141419;border:1px solid #26262e;border-radius:12px}\n" +
+  ".ok{color:#2ea043}.warn{color:#d4a72c}.bad{color:#f85149}\n" +
+  ".c-verified{color:#2ea043}.c-testfailing{color:#d4a72c}.c-toolchainmismatch{color:#d4a72c}.c-missingdependency{color:#eaa441}.c-doesnotcompile{color:#f85149}.c-nomanifest{color:#eaa441}.c-timedout{color:#6f6f7a}.c-unsafe{color:#e0147c}.c-fetchfailed{color:#6f6f7a}\n" +
+  ".fill-verified{background:#2ea043}.fill-testfailing{background:#d4a72c}.fill-toolchainmismatch{background:#d4a72c}.fill-missingdependency{background:#eaa441}.fill-doesnotcompile{background:#f85149}.fill-nomanifest{background:#eaa441}.fill-timedout{background:#6f6f7a}.fill-unsafe{background:#e0147c}.fill-fetchfailed{background:#6f6f7a}\n" +
+  "footer{margin-top:36px;padding-top:12px;border-top:1px solid #26262e;color:#6f6f7a;font-size:.85rem}\n" +
   "@media(max-width:600px){h1{font-size:1.4rem}.hero .n{font-size:1.8rem}th,td{padding:7px 6px;font-size:.82rem}.stat{flex-basis:calc(50% - 12px)}}\n"
+}
+
+///|
+/// 内联月兔 SVG（MoonBit 品牌吉祥物：玫红兔子 + 长耳 + 01 面罩），零外部依赖
+fn rabbit_logo(width : Int, height : Int) -> String {
+  "<svg width=\"" + width.to_string() + "\" height=\"" + height.to_string() +
+  "\" viewBox=\"0 0 200 200\" aria-hidden=\"true\"><ellipse cx=\"70\" cy=\"52\" rx=\"17\" ry=\"40\" fill=\"#e0147c\"/>" +
+  "<ellipse cx=\"130\" cy=\"52\" rx=\"17\" ry=\"40\" fill=\"#e0147c\"/>" +
+  "<ellipse cx=\"70\" cy=\"52\" rx=\"8\" ry=\"26\" fill=\"#ff7ab5\"/>" +
+  "<ellipse cx=\"130\" cy=\"52\" rx=\"8\" ry=\"26\" fill=\"#ff7ab5\"/>" +
+  "<circle cx=\"100\" cy=\"118\" r=\"60\" fill=\"#e0147c\"/>" +
+  "<rect x=\"72\" y=\"92\" width=\"56\" height=\"44\" rx=\"11\" fill=\"#0a0a0e\"/>" +
+  "<text x=\"100\" y=\"123\" text-anchor=\"middle\" font-family=\"ui-monospace,Consolas,monospace\" font-size=\"19\" font-weight=\"700\" fill=\"#e0147c\">01</text>" +
+  "<circle cx=\"80\" cy=\"110\" r=\"3.6\" fill=\"#fff\"/>" +
+  "<circle cx=\"120\" cy=\"110\" r=\"3.6\" fill=\"#fff\"/></svg>"
 }
 
 ///|
@@ -342,6 +359,7 @@ pub fn render(m : @model.ReportModel) -> String {
   b.write_string("<title>MoonHive 生态验证报告</title>\n")
   b.write_string("<style>\n" + stylesheet() + "</style>\n")
   b.write_string("</head>\n<body>\n")
+  b.write_string("<div class=\"brand\">" + rabbit_logo(22, 22) + " MoonHive</div>\n")
   b.write_string("<h1>MoonHive 生态验证报告</h1>\n")
   b.write_string(
     "<div class=\"sub\">用真实 MoonBit 工具链逐个验证：能不能编译、测试过不过、失败属于哪一类。</div>\n",
