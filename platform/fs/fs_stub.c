@@ -55,6 +55,9 @@ static void fs_str_to_ascii(moonbit_string_t src, char *dst, int32_t cap) {
     return;
   }
   int32_t n = Moonbit_array_length(src);
+#ifdef _WIN32
+  /* Windows：A 版 char* 路径在非宽字符分支（如 remove）使用。中文变 '?' 是
+     有意的边界行为——含非 ASCII 的 Windows 路径应走 *_w 宽字符分支。 */
   if (n > cap - 1) {
     n = cap - 1;
   }
@@ -63,6 +66,39 @@ static void fs_str_to_ascii(moonbit_string_t src, char *dst, int32_t cap) {
     dst[i] = (c > 127) ? '?' : (char)c;
   }
   dst[n] = 0;
+#else
+  /* 非 Windows：文件系统原生 UTF-8，MoonBit String 内存为 UTF-16。
+     把 UTF-16（含代理对）编码为 UTF-8 字节，使中文路径真正可用——
+     而不是像 A 版那样把非 ASCII 替换成 '?'（那样 copy_tree 在含中文
+     目录的本地候选上会复制失败）。 */
+  int32_t o = 0;
+  for (int32_t i = 0; i < n && o + 4 < cap; i++) {
+    uint32_t cp = src[i];
+    if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < n) {
+      uint32_t lo = src[i + 1];
+      if (lo >= 0xDC00 && lo <= 0xDFFF) {
+        cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
+        i++;
+      }
+    }
+    if (cp < 0x80) {
+      dst[o++] = (char)cp;
+    } else if (cp < 0x800) {
+      dst[o++] = (char)(0xC0 | (cp >> 6));
+      dst[o++] = (char)(0x80 | (cp & 0x3F));
+    } else if (cp < 0x10000) {
+      dst[o++] = (char)(0xE0 | (cp >> 12));
+      dst[o++] = (char)(0x80 | ((cp >> 6) & 0x3F));
+      dst[o++] = (char)(0x80 | (cp & 0x3F));
+    } else {
+      dst[o++] = (char)(0xF0 | (cp >> 18));
+      dst[o++] = (char)(0x80 | ((cp >> 12) & 0x3F));
+      dst[o++] = (char)(0x80 | ((cp >> 6) & 0x3F));
+      dst[o++] = (char)(0x80 | (cp & 0x3F));
+    }
+  }
+  dst[o] = 0;
+#endif
 }
 
 static moonbit_string_t fs_ascii_to_str(const char *src, int32_t len) {
