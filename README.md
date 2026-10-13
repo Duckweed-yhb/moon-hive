@@ -36,7 +36,7 @@ Failed with 0 warnings, 14 errors.
 
 一句 `git clone && moon check` 脚本会把这个包记成"编译失败"。**但它没有坏——是工具链版本差了一档。** 把健康的库标成不可用，比没有工具更糟。
 
-区分这两者需要理解 MoonBit 编译器的错误措辞（`has no method` / `unresolved identifier` / `unknown type` …），并且**判定顺序不能错**：依赖缺失和工具链不兼容的特征经常同时出现，顺序错了就会给出误导性结论。详见 [九类结论与判定顺序](docs/ARCHITECTURE.md#九类结论与判定顺序)。
+区分这两者需要理解 MoonBit 编译器的错误措辞（`has no method` / `unresolved identifier` / `unknown type` …），并且**判定顺序不能错**：依赖缺失和工具链不兼容的特征经常同时出现，顺序错了就会给出误导性结论。从当前版本起，`ToolchainMismatch` **不再对特征串一刀切**——命中后会提取缺失符号并按**归属**判定：符号属 core（如 `Bytes`、`@json`，由工具链随附版本管控）才判工具链差异，属包自身（如 `MyPacket`）则判 `DoesNotCompile`。详见 [九类结论与判定顺序](docs/ARCHITECTURE.md#九类结论与判定顺序)。
 
 ## 库核心是全后端可移植的（构建期强制，不是文档口号）
 

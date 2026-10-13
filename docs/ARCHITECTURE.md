@@ -124,29 +124,25 @@ $ ./build.ps1 -CrossBackend
 | 3 | `TimedOut` | 超出时间预算 | 时间用尽后继续判定会得出不可靠结论 |
 | 4 | `ToolchainMismatch` | 声明的目标后端不含本次使用的后端 | 环境不匹配时，编译结果不能归因于代码 |
 | 5 | `MissingDependency` | 依赖解析失败 | 优先于工具链判定：两者特征常同时出现，而依赖问题更具体 |
-| 6 | `ToolchainMismatch` | 诊断含"方法/类型不存在"等版本漂移特征 | 与真正的编译错误区分开——**这是本项目最关键的一次判断** |
+| 6 | `ToolchainMismatch` | 诊断含"方法/类型不存在"等版本漂移特征，且缺失符号属 core 或经外部探测确认缺失 | 与真正的编译错误区分开——**这是本项目最关键的一次判断**；不再对特征串一刀切 |
 | 7 | `DoesNotCompile` | 其余编译失败 | 排除以上所有之后，才能归因于代码本身 |
 | 8 | `TestFailing` | check 通过但测试失败 | 能编译说明接口可用，只是质量未达标 |
 | 9 | `Verified` | 全绿 | 唯一"可以直接使用"的结论 |
 
 `FetchFailed` 是第 0 类：获取阶段就失败，未进入判定流程。
 
-### 工具链不兼容的特征库
+### 工具链不兼容的语义化判定
 
-区分工具链问题与代码问题，靠的是一组**具体的**特征串：
+特征串（`has no method` / `unresolved identifier` 等）只是判定**入口**；真正区分工具链问题与代码问题，靠的是对缺失符号的**归属分析**：
 
-```
-has no method          引用当前工具链不存在的 API
-no method named
-unknown method
-unresolved identifier
-unknown type / type not found
-unsupported target
-no such field
-unexpected token       语法层面的漂移
-```
+1. 命中特征后提取缺失符号（如 `Type Bytes has no method exact_view.` → `Bytes.exact_view`）；
+2. 判定符号根归属：
+   - 属 **core 类型/模块**（`Bytes`、`@json` 等，由工具链随附版本管控）→ `ToolchainMismatch`（版本差异）；
+   - 属 **包自身/未知**（如 `MyPacket`）→ `DoesNotCompile`（包/文档写错）；
+   - 提取不到符号 → 保守保留 `ToolchainMismatch`。
+3. 外部符号存在性证据（如 `verify/compare` 跨工具链对比确认缺失）通过 `classify_verified` 的 `confirmed_missing` 注入，一并判 `ToolchainMismatch`。
 
-这组特征刻意保守：**宁可把工具链问题判成代码问题（冤枉一个包），也不要把代码问题判成工具链问题（掩盖一个坏包）**。前者用户自己会发现，后者会让工具撒谎。
+这样既识别"工具链版本差了一档"（core 符号缺失），又不把"包自己写错"误判成工具链问题——正是回应评审批评"对语义没有任何了解"的关键改进。core 白名单（常用根类型/模块）内置，随 MoonBit core 演进需增补。
 
 ## 安全设计
 

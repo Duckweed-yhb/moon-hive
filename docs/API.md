@@ -66,7 +66,21 @@ struct CheckOutcome {
 pub fn classify(o : CheckOutcome) -> Diagnosis
 ```
 
-根据检查结果给出结论。**判定顺序有讲究**，见下方[判定顺序](#判定顺序)。
+根据检查结果给出结论。**判定顺序有讲究**，见下方[判定顺序](#判定顺序)。`classify(o)` 是 `classify_verified(o, [])` 的简写，未注入外部符号探测证据。
+
+### `classify_verified`
+
+```moonbit
+pub fn classify_verified(o : CheckOutcome, confirmed_missing : Array[String]) -> Diagnosis
+```
+
+**语义化版本**。`confirmed_missing` 是已用外部手段（如 `verify/compare` 跨工具链对比）确认在当前工具链缺失的符号集。命中工具链特征（如 `has no method` / `unresolved identifier`）后，不再一刀切判定，而是先提取缺失符号并判断其**根归属**：
+
+- 符号属 **core 类型/模块**（`Bytes`、`@json` 等，由工具链随附版本管控）→ `ToolchainMismatch`
+- 符号属 **包自身/未知**（如 `MyPacket`）→ `DoesNotCompile`（包/文档写错，而非工具链问题）
+- 提取不到符号 → 保守保留 `ToolchainMismatch`
+
+`confirmed_missing` 中任一符号命中也判 `ToolchainMismatch`。
 
 ### `explain`
 
@@ -137,7 +151,7 @@ pub fn first_error_line(text : String) -> String
 2. **安全**：`risky` 为真 → `Unsafe`（含 FFI / 构建脚本，不执行）
 3. **超时**：`timed_out` → `TimedOut`
 4. **目标后端不匹配**：仓库声明了后端但不含本次 `target` → `ToolchainMismatch`
-5. **check 失败**：按 `MissingDependency` → `ToolchainMismatch` → 真正的 `DoesNotCompile` 依次判定
+5. **check 失败**：先判 `MissingDependency`（与符号归属无关）；再按**语义化**判 `ToolchainMismatch`（命中特征后提取缺失符号，符号属 core / 或经 `confirmed_missing` 确认缺失才判）；否则判真正的 `DoesNotCompile`
 6. **check 通过**：`test_outcome` 失败 → `TestFailing`；全过 → `Verified`
 
 关键点：依赖缺失和工具链不兼容的特征经常同时出现，**必须优先判定依赖缺失**，否则会误归因。
@@ -164,5 +178,6 @@ fn judge(outcome : @diagnose.CheckOutcome) -> Unit {
 
 ## 已知限制
 
-- 特征库（`toolchain_mismatch_markers` / `missing_dependency_markers` / `test_failure_markers`）是**内置硬编码**的字符串匹配，依赖 MoonBit 编译器的当前措辞；工具链措辞演进可能影响判定。`ToolchainMismatch` 的判定刻意保守（宁可判 `DoesNotCompile` 也不滥用），用真实 `moonc` 输出做过语料回归校准。
+- `ToolchainMismatch` **不再对特征串一刀切**：命中 `has no method` / `unresolved identifier` 等特征后，会提取缺失符号并按**符号归属**做语义判定——符号属 core（工具链随附版本管控）才判工具链差异，属包自身则判 `DoesNotCompile`。core 白名单（`Bytes`、`@json` 等常用根类型/模块）内置，随 MoonBit core 演进可能需增补；更彻底的外部符号存在性证据可通过 `classify_verified` 的 `confirmed_missing` 注入。
+- `MissingDependency` / `test_failure` 仍用特征串匹配，已用真实 `moonc` 输出做过语料回归校准。
 - 本包是纯计算层，只吃字符串、返回结论，不做文件系统与进程操作；需要端到端验证请使用 CLI 或上层 `verify/` 包。
