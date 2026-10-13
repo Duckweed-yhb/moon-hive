@@ -12,4 +12,5 @@ import {
   "Duckweed/moon-hive/verify/diagnose" @diagnose,
   "Duckweed/moon-hive/verify/gitsource" @gitsource,
   "Duckweed/moon-hive/verify/workspace" @workspace,
+  "Duckweed/moon-hive/verify/compare" @compare,
 }

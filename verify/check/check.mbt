@@ -150,7 +150,7 @@ fn proc_error_text(e : @proc.ProcError) -> String {
 }
 
 ///|
-/// 验证一个候选仓库。
+/// 验证一个候选仓库（使用默认工具链命令 "moon"）。
 ///
 /// `target`：目标后端，默认 "native"
 /// `timeout_ms`：单条工具链命令的超时
@@ -163,102 +163,7 @@ pub fn verify_candidate(
   timeout_ms : Int,
   with_test : Bool,
 ) -> Result[RevResult, CheckError] {
-  let dir_name = @gitsource.to_dir_name(c.slug)
-  let dir = match @workspace.alloc(w, dir_name) {
-    Ok(d) => d
-    Err(_) => return Err(WorkspaceFailed("无法分配工作区子目录: " + dir_name))
-  }
-
-  // 1. 取仓库：本地目录直接复制进工作区；远端仓库走 git 克隆
-  if @gitsource.is_local(c) {
-    if !@fs.copy_tree(c.local_path, dir) {
-      return Ok(
-        empty_result(c.slug, @diagnose.FetchFailed("无法复制本地目录: " + c.local_path)),
-      )
-    }
-  } else {
-    match @gitsource.clone_repo(c, dir, 1, backend) {
-      Err(@gitsource.RemoteUnreachable(m)) =>
-        return Ok(empty_result(c.slug, @diagnose.FetchFailed(m)))
-      Err(_) => return Ok(empty_result(c.slug, @diagnose.FetchFailed("无法访问远端")))
-      Ok(_) => ()
-    }
-  }
-
-  // 2. 静态预检 + 规模测量（不执行任何仓库代码）
-  let has_manifest = @gitsource.is_moonbit_module(dir)
-  let (mbt_count, lines, test_count, bytes) = measure_repo(dir)
-  let risky = detect_unsafe(dir)
-  let (target_label, declared) = (target, detect_declared_targets(dir))
-
-  // 3. 不满足前提或存在风险时，直接给出结论，不执行工具链
-  if !has_manifest || risky {
-    let diag = if !has_manifest {
-      @diagnose.NoManifest
-    } else {
-      @diagnose.Unsafe
-    }
-    return Ok({
-      slug: c.slug,
-      diagnosis: diag,
-      check_ms: 0UL,
-      test_ms: 0UL,
-      repo_bytes: bytes,
-      mbt_files: mbt_count,
-      source_lines: lines,
-      test_files: test_count,
-      fetched: true,
-    })
-  }
-
-  // 4. 跑 moon check
-  let check_cmd = "moon check --target " + target_label
-  let (check_out, check_ms) = match @proc.run(check_cmd, dir, timeout_ms) {
-    Ok(o) => (to_outcome(o), o.elapsed_ms)
-    Err(e) => (
-      { exit_code: -1, stdout: "", stderr: proc_error_text(e) },
-      0UL,
-    )
-  }
-  let mut timed_out = check_ms > timeout_ms.to_uint64()
-
-  // 5. check 通过且允许时，跑 moon test
-  let mut test_outcome : @diagnose.CommandOutcome? = None
-  let mut test_ms = 0UL
-  if check_out.exit_code == 0 && with_test {
-    match @proc.run("moon test --target " + target_label, dir, timeout_ms) {
-      Ok(o) => {
-        test_outcome = Some(to_outcome(o))
-        test_ms = o.elapsed_ms
-        if test_ms > timeout_ms.to_uint64() {
-          timed_out = true
-        }
-      }
-      Err(_) => ()
-    }
-  }
-
-  // 6. 交给分类器下结论
-  let outcome : @diagnose.CheckOutcome = {
-    has_manifest,
-    risky,
-    timed_out,
-    check: check_out,
-    test_outcome,
-    declared_targets: declared,
-    target: target_label,
-  }
-  Ok({
-    slug: c.slug,
-    diagnosis: @diagnose.classify(outcome),
-    check_ms,
-    test_ms,
-    repo_bytes: bytes,
-    mbt_files: mbt_count,
-    source_lines: lines,
-    test_files: test_count,
-    fetched: true,
-  })
+  verify_with_toolchain(c, w, backend, target, timeout_ms, with_test, "moon")
 }
 
 ///|
@@ -436,4 +341,151 @@ fn empty_result(slug : String, d : @diagnose.Diagnosis) -> RevResult {
 pub fn release_candidate(w : @workspace.Workspace, slug : String) -> Unit {
   let dir = @proc.join_path(@workspace.root_of(w), @gitsource.to_dir_name(slug))
   ignore(@workspace.release(w, dir))
+}
+
+///|
+/// 用**指定工具链命令**验证一个候选仓库（verify_candidate 的泛化实现）。
+///
+/// `toolchain_cmd`：可执行命令或完整路径（如 "moon"、"moon-0.10.14"、
+/// "C:/tools/moon.exe"），实际执行 `toolchain_cmd check --target <target>`。
+/// 与 verify_candidate 的唯一区别是命令前缀可配；"moon" 时行为完全一致。
+fn verify_with_toolchain(
+  c : @gitsource.Candidate,
+  w : @workspace.Workspace,
+  backend : @gitsource.GitBackend,
+  target : String,
+  timeout_ms : Int,
+  with_test : Bool,
+  toolchain_cmd : String,
+) -> Result[RevResult, CheckError] {
+  let dir_name = @gitsource.to_dir_name(c.slug)
+  let dir = match @workspace.alloc(w, dir_name) {
+    Ok(d) => d
+    Err(_) => return Err(WorkspaceFailed("无法分配工作区子目录: " + dir_name))
+  }
+
+  // 1. 取仓库：本地目录直接复制进工作区；远端仓库走 git 克隆
+  if @gitsource.is_local(c) {
+    if !@fs.copy_tree(c.local_path, dir) {
+      return Ok(
+        empty_result(c.slug, @diagnose.FetchFailed("无法复制本地目录: " + c.local_path)),
+      )
+    }
+  } else {
+    match @gitsource.clone_repo(c, dir, 1, backend) {
+      Err(@gitsource.RemoteUnreachable(m)) =>
+        return Ok(empty_result(c.slug, @diagnose.FetchFailed(m)))
+      Err(_) => return Ok(empty_result(c.slug, @diagnose.FetchFailed("无法访问远端")))
+      Ok(_) => ()
+    }
+  }
+
+  // 2. 静态预检 + 规模测量（不执行任何仓库代码）
+  let has_manifest = @gitsource.is_moonbit_module(dir)
+  let (mbt_count, lines, test_count, bytes) = measure_repo(dir)
+  let risky = detect_unsafe(dir)
+  let (target_label, declared) = (target, detect_declared_targets(dir))
+
+  // 3. 不满足前提或存在风险时，直接给出结论，不执行工具链
+  if !has_manifest || risky {
+    let diag = if !has_manifest {
+      @diagnose.NoManifest
+    } else {
+      @diagnose.Unsafe
+    }
+    return Ok({
+      slug: c.slug,
+      diagnosis: diag,
+      check_ms: 0UL,
+      test_ms: 0UL,
+      repo_bytes: bytes,
+      mbt_files: mbt_count,
+      source_lines: lines,
+      test_files: test_count,
+      fetched: true,
+    })
+  }
+
+  // 4. 跑 moon check（命令前缀由调用方指定）
+  let check_cmd = toolchain_cmd + " check --target " + target_label
+  let (check_out, check_ms) = match @proc.run(check_cmd, dir, timeout_ms) {
+    Ok(o) => (to_outcome(o), o.elapsed_ms)
+    Err(e) => (
+      { exit_code: -1, stdout: "", stderr: proc_error_text(e) },
+      0UL,
+    )
+  }
+  let mut timed_out = check_ms > timeout_ms.to_uint64()
+
+  // 5. check 通过且允许时，跑 moon test
+  let mut test_outcome : @diagnose.CommandOutcome? = None
+  let mut test_ms = 0UL
+  if check_out.exit_code == 0 && with_test {
+    match @proc.run(toolchain_cmd + " test --target " + target_label, dir, timeout_ms) {
+      Ok(o) => {
+        test_outcome = Some(to_outcome(o))
+        test_ms = o.elapsed_ms
+        if test_ms > timeout_ms.to_uint64() {
+          timed_out = true
+        }
+      }
+      Err(_) => ()
+    }
+  }
+
+  // 6. 交给分类器下结论
+  let outcome : @diagnose.CheckOutcome = {
+    has_manifest,
+    risky,
+    timed_out,
+    check: check_out,
+    test_outcome,
+    declared_targets: declared,
+    target: target_label,
+  }
+  Ok({
+    slug: c.slug,
+    diagnosis: @diagnose.classify(outcome),
+    check_ms,
+    test_ms,
+    repo_bytes: bytes,
+    mbt_files: mbt_count,
+    source_lines: lines,
+    test_files: test_count,
+    fetched: true,
+  })
+}
+
+///|
+/// 用多个工具链命令验证同一候选仓库，返回每次运行的结果。
+///
+/// 这是跨工具链对比（verify/compare）的执行端：把「行为是否随工具链
+/// 变化」这一机制性证据喂给 compare_runs，从而区分"包坏"（所有工具链
+/// 一致失败）与"工具链演进"（有通过有失败）。
+///
+/// `toolchains`：工具链命令列表（如 ["moon", "moon-0.10.14"]）；
+/// 为空时返回空数组（由调用方决定如何解释）。
+pub fn verify_candidate_toolchains(
+  c : @gitsource.Candidate,
+  w : @workspace.Workspace,
+  backend : @gitsource.GitBackend,
+  target : String,
+  timeout_ms : Int,
+  with_test : Bool,
+  toolchains : Array[String],
+) -> Result[Array[@compare.ToolchainRun], CheckError] {
+  let runs : Array[@compare.ToolchainRun] = []
+  for tc in toolchains {
+    match verify_with_toolchain(c, w, backend, target, timeout_ms, with_test, tc) {
+      Ok(r) => {
+        runs.push({
+          toolchain: tc,
+          diagnosis: r.diagnosis,
+          evidence: @diagnose.evidence(r.diagnosis),
+        })
+      }
+      Err(e) => return Err(e)
+    }
+  }
+  Ok(runs)
 }

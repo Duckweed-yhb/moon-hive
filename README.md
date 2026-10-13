@@ -112,10 +112,11 @@ MoonHive 也是独立的第三方项目，与 MoonBit 官方的 mooncakes.io 发
 - **环境自检**：`doctor` 检测工具链、git TLS 后端、临时目录并给出修复建议
 - **收藏夹**：`keep` / `list` / `forget` 收藏验证过的包，本地存 `favorites.json`
 - **报告对比**：`report/compare` 模块对比两轮验证结果，区分好转（不可用→可用）、恶化（可用→不可用）、新增、消失
+- **跨工具链对比**：`compare` 用多个 moon 版本验证同一包，区分"包坏"（所有工具链一致失败）与"工具链演进"（有通过有失败）——不依赖编译器措辞的机制性证据
 
 ## 安装（作为库）
 
-归因引擎已发布到 mooncakes.io（`Duckweed/moon-hive@0.2.1`）。在任何 MoonBit 项目里即可安装：
+归因引擎已发布到 mooncakes.io（`Duckweed/moon-hive@0.2.4`）。在任何 MoonBit 项目里即可安装：
 
 ```bash
 moon add Duckweed/moon-hive
@@ -164,6 +165,9 @@ import "Duckweed/moon-hive/report/model" @model
 
 # 本地仪表盘
 ./build.ps1 -Run @("serve", "--dir", "reports", "--port", "9090")
+
+# 跨工具链对比（≥2 个工具链版本才有对比意义）
+./build.ps1 -Run @("compare", "--toolchains", "moon,moon-0.10.14", "moonbit-community/yaml")
 ```
 
 ### 输入格式

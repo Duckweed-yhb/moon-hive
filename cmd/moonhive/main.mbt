@@ -26,6 +26,7 @@ fn main {
     "doctor" => cmd_doctor()
     "inspect" => cmd_inspect(rest)
     "survey" => cmd_survey(rest)
+    "compare" => cmd_compare(rest)
     "serve" => @proc.exit_with(@serve.run(rest))
     "keep" => @proc.exit_with(@favorites.cmd_keep(rest))
     "list" => @proc.exit_with(@favorites.cmd_list())
@@ -43,7 +44,7 @@ fn main {
 
 ///|
 fn version_line() -> String {
-  "moonhive 0.2.0 (MoonBit 生态验证引擎)"
+  "moonhive 0.2.4 (MoonBit 生态验证引擎)"
 }
 
 ///|
@@ -172,6 +173,112 @@ fn cmd_survey(args : Array[String]) -> Unit {
 }
 
 ///|
+/// compare 命令：moonhive compare [--toolchains <a,b,c>] <候选>
+///
+/// 对同一个候选包，用多个工具链命令（moon 版本）各验证一遍，
+/// 对比诊断结果，区分"包坏"（所有工具链一致失败）与"工具链演进"
+/// （有通过有失败）——这是 verify/diagnose 特征串匹配之外的第二层
+/// 机制性证据：行为是否随工具链变化，不依赖任何编译器措辞。
+fn cmd_compare(args : Array[String]) -> Unit {
+  if args.length() == 0 {
+    println("用法: moonhive compare [--toolchains <a,b,c>] <候选>")
+    println("")
+    println("候选可以是 owner/repo、https://github.com/owner/repo 或本地目录")
+    println("--toolchains: 逗号分隔的工具链命令（默认 moon），如 moon,moon-0.10.14")
+    println("  建议至少 2 个版本才有对比意义；单工具链时退化为普通诊断")
+    println("")
+    println("示例: moonhive compare --toolchains moon,moon-0.10.14 moonbit-community/yaml")
+    @proc.exit_with(14)
+    return
+  }
+  let mut toolchains : Array[String] = ["moon"]
+  let candidates : Array[@gitsource.Candidate] = []
+  let mut i = 0
+  let bad : Array[String] = []
+  while i < args.length() {
+    let a = args[i]
+    if a == "--toolchains" && i + 1 < args.length() {
+      toolchains = []
+      for t in args[i + 1].split(",") {
+        let tt = t.trim().to_owned()
+        if tt.length() > 0 {
+          toolchains.push(tt)
+        }
+      }
+      i = i + 2
+    } else if a.has_prefix("--toolchains=") {
+      toolchains = []
+      for t in a[13:].to_owned().split(",") {
+        let tt = t.trim().to_owned()
+        if tt.length() > 0 {
+          toolchains.push(tt)
+        }
+      }
+      i = i + 1
+    } else {
+      match @inspect.resolve_candidate(a) {
+        Ok(c) => candidates.push(c)
+        Err(msg) => bad.push(a + "（" + msg + "）")
+      }
+      i = i + 1
+    }
+  }
+  for b in bad {
+    println("跳过: " + b)
+  }
+  if candidates.length() == 0 {
+    println("没有可验证的候选。")
+    @proc.exit_with(14)
+    return
+  }
+  if toolchains.length() < 2 {
+    println(
+      "注意: 仅 " + toolchains.length().to_string() + " 个工具链，无法对比行为差异；建议 --toolchains moon,moon-0.10.14",
+    )
+  }
+
+  let backend = @gitsource.detect_backend()
+  let ws = match @workspace.create() {
+    Ok(w) => w
+    Err(_) => {
+      println("无法创建工作区（临时目录不可写？）")
+      @proc.exit_with(10)
+      return
+    }
+  }
+  let mut any_failure = false
+  for c in candidates {
+    match
+      @check.verify_candidate_toolchains(
+        c,
+        ws,
+        backend,
+        "native",
+        120000,
+        true,
+        toolchains,
+      ) {
+      Ok(runs) => {
+        let v = @compare.compare_runs(runs)
+        match v {
+          @compare.AllGreen => ()
+          _ => any_failure = true
+        }
+        println(@compare.render_compare(c.slug, runs, v))
+        println("JSON: " + @compare.to_json(c.slug, runs, v))
+        println("")
+      }
+      Err(_) => {
+        println("验证失败: " + c.slug)
+        any_failure = true
+      }
+    }
+  }
+  ignore(@workspace.destroy(ws))
+  @proc.exit_with(if any_failure { 1 } else { 0 })
+}
+
+///|
 fn print_usage() -> Unit {
   println(version_line())
   println("")
@@ -181,6 +288,9 @@ fn print_usage() -> Unit {
   println("  survey [--out md] [--json f] [--site f] [--registry] <候选>...")
   println("                                  批量普查并生成三种格式的报告")
   println("  inspect [--registry] <候选>...  体检指定仓库：拉下来用真实工具链验证")
+  println("  compare [--toolchains <a,b,c>] <候选>")
+  println("                                  跨工具链对比：同一包用多个 moon 版本验证，")
+  println("                                  区分\"包坏\"与\"工具链演进\"")
   println("  serve [--dir <目录>] [--port <n>]")
   println("                                  把报告目录变成浏览器仪表盘（127.0.0.1）")
   println("  doctor                          检查运行环境（工具链 / git / TLS / 临时目录）")

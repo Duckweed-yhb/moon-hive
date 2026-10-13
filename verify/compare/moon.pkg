@@ -1,0 +1,11 @@
+///|
+/// verify/compare — 跨工具链行为对比（纯计算，可离线单测）
+///
+/// 只吃「工具链名 + 诊断结果」，不 import 任何 platform 包，
+/// 声明覆盖全部四个后端：跨工具链对比是机制性证据，不依赖
+/// 编译器措辞特征串，这是对"硬编码特征串可替代"软肋的直接回应。
+supported_targets = "wasm+wasm-gc+js+native"
+
+import {
+  "Duckweed/moon-hive/verify/diagnose" @diagnose,
+}

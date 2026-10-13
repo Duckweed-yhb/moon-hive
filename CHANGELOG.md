@@ -2,6 +2,20 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/) 风格，版本号遵循语义化版本。
 
+## [Unreleased]
+
+### 新增
+
+- **跨工具链对比（`verify/compare` + `moonhive compare`）**：同一候选包用多个 moon 版本（工具链命令）各验证一遍，对比诊断结果，区分"包坏"（所有工具链一致失败，ConsistentFail）与"工具链演进"（有通过有失败，ToolchainDrift），以及"都失败但原因不同"（InconsistentFail）。这是对"归因依赖硬编码特征串、护城河弱"的直接回应：**行为是否随工具链变化不依赖任何编译器措辞**，是机制性证据。
+  - `verify/compare` 为纯计算包（`wasm+wasm-gc+js+native` 四后端），含 15 个单测覆盖判定顺序、渲染与 JSON 输出；
+  - `verify/check` 新增 `verify_candidate_toolchains`（多工具链执行）与私有泛化实现 `verify_with_toolchain`（工具链命令可配，`verify_candidate` 等价于 `"moon"`）；
+  - CLI 新增 `compare` 子命令：`moonhive compare [--toolchains moon,moon-0.10.14] <候选>`，逐候选渲染结论 + 输出一行 JSON，任一候选非 AllGreen 时退出码 1。
+- **`version` 对齐 moon.mod**：`moonhive version` 由写死的 0.2.0 修正为 0.2.4。
+
+### 质量基线
+
+- `moon check` 0 错误；wasm-gc 测试 107 全绿（含 compare 新增 15 项）；native build 通过（端到端 `compare` 实测：健康包双工具链 → AllGreen，退出码 0）。
+
 ## [0.2.4] - 2026-10
 
 ### 修复
