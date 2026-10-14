@@ -44,7 +44,7 @@ fn main {
 
 ///|
 fn version_line() -> String {
-  "moonhive 0.2.4 (MoonBit 生态验证引擎)"
+  "moonhive 0.3.0 (MoonBit 生态验证引擎)"
 }
 
 ///|
