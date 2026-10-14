@@ -53,7 +53,7 @@ Failed with 0 warnings, 14 errors.
 因此库核心能在浏览器/Wasm 环境里直接用，CI 会在四个后端上分别编译并跑测试：
 
 ```powershell
-./build.ps1 -CrossBackend   # => wasm / wasm-gc / js 各 92 测试全绿，native 145
+./build.ps1 -CrossBackend   # => wasm / wasm-gc / js 各 111 测试全绿，native 165
 ```
 
 ## 其它语言生态里的对标工具
@@ -198,8 +198,8 @@ import "Duckweed/moon-hive/report/model" @model
 |---|---|
 | MoonBit 源码 | 5,527 行 / 20 个包 |
 | C FFI 平台层 | 1,863 行（fs 774 / http 741 / proc 348） |
-| 单元测试 | **145 个，全绿**（`moon test --target native`） |
-| 跨后端测试 | **92 个 × 3 后端**（`wasm` / `wasm-gc` / `js` 上的库核心） |
+| 单元测试 | **165 个，全绿**（`moon test --target native`） |
+| 跨后端测试 | **111 个 × 3 后端**（`wasm` / `wasm-gc` / `js` 上的库核心） |
 | 第三方运行时依赖 | **0**（仅 `moonbitlang/core` + 自建 C FFI 层） |
 | CI | GitHub Actions，Linux / Windows 双平台矩阵 |
 
