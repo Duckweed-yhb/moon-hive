@@ -12,7 +12,7 @@ MoonHive 的当前状态与下一步计划。作为新项目，规划是持续�
 
 ## 短期（2026-10）
 
-- [x] 发布到 mooncakes.io（**0.2.1 已发布**，`moon add Duckweed/moon-hive` 即可使用；发布包已剔除本地探测目录）——**库声明可移植之后，这一步的意义从"顺手发个包"变成"让别人真的能 `moon add` 用上归因引擎"**
+- [x] 发布到 mooncakes.io（**0.3.0 已发布**，`moon add Duckweed/moon-hive` 即可使用；含语义化归因 `classify_verified`；发布包已剔除本地探测目录）——**库声明可移植之后，这一步的意义从"顺手发个包"变成"让别人真的能 `moon add` 用上归因引擎"**
 - [x] 真实工具链语料回归：用 `moonc v0.10.14` 固化错误码语料，修复 `[3002] Parse error` 误归为 `ToolchainMismatch` 的缺陷
 - [x] 公开 API 参考：`docs/API.md` 已把 `classify` / `explain` / `evidence` / `count_issues` / `extract_missing_symbols` 等核心 API 契约写成文档（含类型、签名、判定顺序与完整示例）
 - [ ] 治理收尾：CONTRIBUTING / ROADMAP 落定（即本文档）

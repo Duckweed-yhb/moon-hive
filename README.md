@@ -36,7 +36,7 @@ Failed with 0 warnings, 14 errors.
 
 一句 `git clone && moon check` 脚本会把这个包记成"编译失败"。**但它没有坏——是工具链版本差了一档。** 把健康的库标成不可用，比没有工具更糟。
 
-区分这两者需要理解 MoonBit 编译器的错误措辞（`has no method` / `unresolved identifier` / `unknown type` …），并且**判定顺序不能错**：依赖缺失和工具链不兼容的特征经常同时出现，顺序错了就会给出误导性结论。从当前版本起，`ToolchainMismatch` **不再对特征串一刀切**——命中后会提取缺失符号并按**归属**判定：符号属 core（如 `Bytes`、`@json`，由工具链随附版本管控）才判工具链差异，属包自身（如 `MyPacket`）则判 `DoesNotCompile`。详见 [九类结论与判定顺序](docs/ARCHITECTURE.md#九类结论与判定顺序)。
+区分这两者需要理解 MoonBit 编译器的错误措辞（`has no method` / `unresolved identifier` / `unknown type` …），并且**判定顺序不能错**：依赖缺失和工具链不兼容的特征经常同时出现，顺序错了就会给出误导性结论。从 0.3.0 起，`ToolchainMismatch` **不再对特征串一刀切**——命中后会提取缺失符号并按**归属**判定：符号属 core（如 `Bytes`、`@json`，由工具链随附版本管控）才判工具链差异，属包自身（如 `MyPacket`）则判 `DoesNotCompile`。详见 [九类结论与判定顺序](docs/ARCHITECTURE.md#九类结论与判定顺序)。这一行为可在 [`docs/examples/classify-demo/`](docs/examples/classify-demo/README.md) 里直接运行复现（同一 `has no method` 措辞、不同归属 → 不同结论）。
 
 ## 库核心是全后端可移植的（构建期强制，不是文档口号）
 
@@ -116,7 +116,7 @@ MoonHive 也是独立的第三方项目，与 MoonBit 官方的 mooncakes.io 发
 
 ## 安装（作为库）
 
-归因引擎已发布到 mooncakes.io（`Duckweed/moon-hive@0.2.4`）。在任何 MoonBit 项目里即可安装：
+归因引擎已发布到 mooncakes.io（`Duckweed/moon-hive@0.3.0`）。在任何 MoonBit 项目里即可安装：
 
 ```bash
 moon add Duckweed/moon-hive

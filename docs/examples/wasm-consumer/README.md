@@ -2,7 +2,7 @@
 
 证明 MoonHive 的**库核心**（`verify/diagnose`）是纯计算，可在 `wasm` / `js` 后端直接使用，**脱离 CLI 与 C FFI 独立可用**。
 
-这个示例独立 `moon add Duckweed/moon-hive@0.2.1`，构造 `CheckOutcome` 调用 `classify`，断言归因结论。
+这个示例独立 `moon add Duckweed/moon-hive@0.3.0`，构造 `CheckOutcome` 调用 `classify`，断言归因结论。
 
 ```bash
 moon test --target wasm     # 2 个测试全过
@@ -16,7 +16,7 @@ moon test --target native   # 2 个测试全过
 
 ```
 wasm-consumer/
-├── moon.mod        声明依赖 Duckweed/moon-hive@0.2.1
+├── moon.mod        声明依赖 Duckweed/moon-hive@0.3.0
 └── main/
     ├── moon.pkg    库包，supported_targets = all
     └── main.mbt    构造场景 → classify → 断言（2 个测试）
