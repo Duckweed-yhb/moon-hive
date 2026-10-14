@@ -146,6 +146,7 @@ fn proc_error_text(e : @proc.ProcError) -> String {
     SpawnFailed => "无法创建子进程（命令不可执行或系统资源不足）" + suffix
     OutOfMemory => "内存分配失败"
     StderrCaptureFailed(code) => "无法捕获 stderr（错误码 " + code.to_string() + "）"
+    TimedOut => "命令执行超过时限，已被强制终止"
   }
 }
 
@@ -193,7 +194,12 @@ pub fn verify_registry_candidate(
 
   // 1. 用 moon fetch 拉取注册表发布版本
   match @proc.run("moon fetch " + slug, dir, timeout_ms) {
-    Err(e) => return Ok(empty_result(slug, @diagnose.FetchFailed(proc_error_text(e))))
+    Err(e) =>
+      if e is @proc.TimedOut {
+        return Ok(empty_result(slug, @diagnose.TimedOut))
+      } else {
+        return Ok(empty_result(slug, @diagnose.FetchFailed(proc_error_text(e))))
+      }
     Ok(o) =>
       if o.exit_code != 0 {
         let ev = @diagnose.first_error_line(o.stdout + "\n" + o.stderr)
@@ -240,14 +246,19 @@ pub fn verify_registry_candidate(
 
   // 4. 跑 moon check（cwd 为包目录）
   let check_cmd = "moon check --target " + target_label
+  let mut timed_out = false
   let (check_out, check_ms) = match @proc.run(check_cmd, pkg, timeout_ms) {
-    Ok(o) => (to_outcome(o), o.elapsed_ms)
-    Err(e) => (
-      { exit_code: -1, stdout: "", stderr: proc_error_text(e) },
-      0UL,
-    )
+    Ok(o) => {
+      timed_out = o.elapsed_ms > timeout_ms.to_uint64()
+      (to_outcome(o), o.elapsed_ms)
+    }
+    Err(e) => {
+      if e is @proc.TimedOut {
+        timed_out = true
+      }
+      ({ exit_code: -1, stdout: "", stderr: proc_error_text(e) }, 0UL)
+    }
   }
-  let mut timed_out = check_ms > timeout_ms.to_uint64()
 
   // 5. check 通过且允许时，跑 moon test
   let mut test_outcome : @diagnose.CommandOutcome? = None
@@ -261,7 +272,7 @@ pub fn verify_registry_candidate(
           timed_out = true
         }
       }
-      Err(_) => ()
+      Err(e) => if e is @proc.TimedOut { timed_out = true }
     }
   }
 
@@ -408,14 +419,19 @@ fn verify_with_toolchain(
 
   // 4. 跑 moon check（命令前缀由调用方指定）
   let check_cmd = toolchain_cmd + " check --target " + target_label
+  let mut timed_out = false
   let (check_out, check_ms) = match @proc.run(check_cmd, dir, timeout_ms) {
-    Ok(o) => (to_outcome(o), o.elapsed_ms)
-    Err(e) => (
-      { exit_code: -1, stdout: "", stderr: proc_error_text(e) },
-      0UL,
-    )
+    Ok(o) => {
+      timed_out = o.elapsed_ms > timeout_ms.to_uint64()
+      (to_outcome(o), o.elapsed_ms)
+    }
+    Err(e) => {
+      if e is @proc.TimedOut {
+        timed_out = true
+      }
+      ({ exit_code: -1, stdout: "", stderr: proc_error_text(e) }, 0UL)
+    }
   }
-  let mut timed_out = check_ms > timeout_ms.to_uint64()
 
   // 5. check 通过且允许时，跑 moon test
   let mut test_outcome : @diagnose.CommandOutcome? = None
@@ -429,7 +445,7 @@ fn verify_with_toolchain(
           timed_out = true
         }
       }
-      Err(_) => ()
+      Err(e) => if e is @proc.TimedOut { timed_out = true }
     }
   }
 

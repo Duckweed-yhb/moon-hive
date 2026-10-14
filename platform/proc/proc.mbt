@@ -31,6 +31,8 @@ pub suberror ProcError {
   OutOfMemory
   /// stderr 重定向文件不可写
   StderrCaptureFailed(Int)
+  /// 命令执行超过超时上限，子进程已被强杀
+  TimedOut
 }
 // ---------- C FFI 声明 ----------
 
@@ -69,7 +71,7 @@ pub fn last_os_error() -> Int {
 /// 把 C 侧错误码翻译成类型化错误。
 ///
 /// C 侧约定（必须与真实退出码区分开）：
-///   -1001 空命令 / -1002 无法创建管道 / -1003 stderr 文件不可写 / -1004 内存不足
+///   -1001 空命令 / -1002 无法创建管道 / -1003 stderr 文件不可写 / -1004 内存不足 / -1005 超时
 fn map_error_code(code : Int) -> ProcError? {
   if code == -1001 {
     Some(EmptyCommand)
@@ -79,6 +81,8 @@ fn map_error_code(code : Int) -> ProcError? {
     Some(StderrCaptureFailed(code))
   } else if code == -1004 {
     Some(OutOfMemory)
+  } else if code == -1005 {
+    Some(TimedOut)
   } else {
     None
   }
@@ -159,7 +163,7 @@ fn path_separator() -> String {
 ///
 /// - `cmd`：要执行的命令（经由 shell）
 /// - `workdir`：工作目录；空串表示继承当前目录
-/// - `timeout_ms`：超时上限（v1 记录并由调用方判定）
+/// - `timeout_ms`：超时上限（毫秒）；超过后 C 层强杀子进程并返回 `TimedOut`
 ///
 /// 非零退出码**不算错误**——编译器报错就是非零退出码，是正常结果。
 pub fn run(cmd : String, workdir : String, timeout_ms : Int) -> Result[Output, ProcError] {
@@ -200,4 +204,27 @@ pub fn run_ok(cmd : String, workdir : String, timeout_ms : Int) -> Bool {
 /// 正常路径调用后不会返回。
 pub fn exit_with(code : Int) -> Unit {
   proc_exit_raw(code)
+}
+
+#cfg(platform="windows")
+test "proc 超时强杀（Windows：ping 无限挂起 → TimedOut）" {
+  // ping -t 无限挂起；800ms 超时后必须被 C 层强杀并返回 TimedOut，
+  // 而不是永久阻塞（守护 proc 层超时不被改回 v1 的"尽力而为"）。
+  let r = run("ping -t 127.0.0.1", "", 800)
+  match r {
+    Err(TimedOut) => ()
+    Err(e) => fail("期望 TimedOut，实际其他错误")
+    Ok(_) => fail("期望超时，实际正常返回")
+  }
+}
+
+#cfg(not(platform="windows"))
+test "proc 超时强杀（POSIX：sleep 挂起 → TimedOut）" {
+  // sleep 100 挂起 100 秒；800ms 超时后必须被 C 层强杀并返回 TimedOut。
+  let r = run("sleep 100", "", 800)
+  match r {
+    Err(TimedOut) => ()
+    Err(e) => fail("期望 TimedOut，实际其他错误")
+    Ok(_) => fail("期望超时，实际正常返回")
+  }
 }
