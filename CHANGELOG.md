@@ -13,9 +13,13 @@
 - **`version` 对齐 moon.mod**：`moonhive version` 由写死的 0.2.0 修正为 0.2.4。
 - **工具链不兼容判定语义化（`verify/diagnose`）**：不再对 `has no method` / `unresolved identifier` 等特征串一刀切判 `ToolchainMismatch`（回应九月赛评审"对语义没有了解"的批评）——命中特征后提取缺失符号并按**符号归属**判定：符号属 core 类型/模块（`Bytes`、`@json` 等，由工具链随附版本管控）→ `ToolchainMismatch`；属包自身/未知（如 `MyPacket`）→ `DoesNotCompile`（包/文档写错）。新增 `classify_verified(outcome, confirmed_missing)` 支持外部符号存在性证据注入；`classify(outcome)` 保持向后兼容并委托之。
 
+### 修复
+
+- **`proc` 层实现真正的进程级超时（`platform/proc`）**：原 `proc_run_capture` 用 `popen`/`fread`/`pclose` 全阻塞且 `(void)timeout_ms` 完全忽略超时——子进程挂死（实测 `moon fetch` 依赖 GitHub 拉取挂起）时 `proc.run` 永不返回，上层超时判定轮不到执行，survey 直接卡死。本次改为：Windows `CreateProcess` + `cmd.exe /c` + Job Object（超时 `TerminateJobObject` 整棵进程树强杀，Job 不可用时 fallback `TerminateProcess` + `taskkill /T`）；POSIX `fork` + `waitpid` 轮询 + `kill`。新增内部错误码 `-1005` → `ProcError::TimedOut`；`check.mbt` 把 fetch 阶段超时归为 `TimedOut` 诊断、check/test 阶段超时置 `timed_out`。修复后挂起包在限时内返回结论不再卡死（实测 mooncrypt 2.4s 归 ToolchainMismatch、mooncry 40.8s 归 TimedOut，此前均 >15 分钟永久挂起）。
+
 ### 质量基线
 
-- `moon check` 0 错误；wasm-gc 测试 **111** 全绿（含 compare 15 项 + 语义化反例/归属测试新增）；native build 通过（端到端 `compare` 实测：健康包双工具链 → AllGreen，退出码 0）。
+- `moon check` 0 错误；native 测试 **165** 全绿（较 0.2.4 的 146 增加 compare 与语义化归属判定等用例）；跨后端（`wasm` / `wasm-gc` / `js`）各 **111** 全绿（含 compare 15 项 + 语义化反例/归属测试新增）；native build 通过（端到端 `compare` 实测：健康包双工具链 → AllGreen，退出码 0）。
 
 ## [0.2.4] - 2026-10
 

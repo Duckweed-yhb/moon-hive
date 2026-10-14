@@ -1,0 +1,7 @@
+pkgtype(kind: "executable")
+
+supported_targets = "native"
+
+import {
+  "Duckweed/moon-hive/verify/diagnose" @diagnose,
+}
