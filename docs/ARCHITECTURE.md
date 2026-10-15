@@ -50,6 +50,27 @@ core/                                                                ┘
   └── error               统一错误契约、类别与退出码映射（纯计算）
 ```
 
+### 库 / CLI 拆分（moon.work 工作区，0.4.0 起）
+
+上面这棵树在仓库里落进 **两个模块**，由根目录 `moon.work` 串成工作区：
+
+```
+moon-hive/
+  moon.work                 members = [".", "./cli"]
+  ├──  "."  → Duckweed/moon-hive       纯计算库核心（四后端）
+  │     core/error  platform/time  report/{model,json,compare,site}
+  │     verify/{diagnose,compare}
+  │
+  └──  "cli/" → Duckweed/moon-hive-cli  仅 native，import 上面的库
+        cmd/moonhive  features/*
+        platform/{fs,http,proc}        ← 仅这里出现 C FFI
+        verify/{check,gitsource,workspace}
+```
+
+- **消费方只 `moon add Duckweed/moon-hive`**：拿到的是纯核心，可在 wasm/浏览器直接调 `classify`；CLI 是独立的 `Duckweed/moon-hive-cli`，不混进库依赖树。
+- 拆边只做一次：库核心包的 import 路径保持 `Duckweed/moon-hive/...` 不变；CLI 包内部把对 native 包的引用前缀改为 `Duckweed/moon-hive-cli/...`，对库核心包的引用原样保留。
+- 工作区里改库核心，CLI 一侧即时可见，无需先发版即可联调。
+
 ### 后端可移植性是构建期强制的，不是文档承诺
 
 上表右侧两条竖线不是注释：**`supported_targets` 把它们变成了编译器会检查的约束**。

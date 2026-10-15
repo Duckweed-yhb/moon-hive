@@ -2,6 +2,18 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/) 风格，版本号遵循语义化版本。
 
+## [0.4.0] - 2026-10
+
+### 新增
+
+- **库 / CLI 拆分为 `moon.work` 工作区的两个模块**：仓库根 `Duckweed/moon-hive` 现在只发布可移植的纯计算库核心（`verify/diagnose`、`verify/compare`、`report/*`、`platform/time`、`core/error`，四后端）；原 native CLI 及其 C FFI 平台层（`cmd/moonhive`、`features/*`、`platform/{fs,http,proc}`、`verify/{check,gitsource,workspace}`）迁到 `cli/` 子模块 `Duckweed/moon-hive-cli`，仅 native、并 `import` 上面的库核心。消费方 `moon add Duckweed/moon-hive` 拿到的是纯核心，不再被拖入 CLI 的 C FFI；命令行前端独立成包（本地用 `Duckweed/moon-hive-cli`）。
+  - 工作区根新增 `moon.work`（成员 `.` 与 `./cli`）；库核心包的 import 路径不变，仅 CLI 包内部把对 native 包的引用前缀改为 `Duckweed/moon-hive-cli/...`，对库核心包的引用保持 `Duckweed/moon-hive/...`。
+  - `moonhive version` 同步为 0.4.0。
+
+### 质量基线
+
+- `moon check` 0 错误；native 测试 **166** 全绿；跨后端（`wasm` / `wasm-gc` / `js`）库核心 **111** 全绿；native build 通过并产出 `Duckweed/moon-hive-cli/cmd/moonhive` 可执行文件（端到端 `moonhive doctor` 正常）。
+
 ## [0.3.0] - 2026-10
 
 ### 新增

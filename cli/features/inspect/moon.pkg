@@ -6,8 +6,8 @@ supported_targets = "native"
 
 import {
   "Duckweed/moon-hive/platform/time" @time,
-  "Duckweed/moon-hive/verify/check" @check,
+  "Duckweed/moon-hive-cli/verify/check" @check,
   "Duckweed/moon-hive/verify/diagnose" @diagnose,
-  "Duckweed/moon-hive/verify/gitsource" @gitsource,
-  "Duckweed/moon-hive/verify/workspace" @workspace,
+  "Duckweed/moon-hive-cli/verify/gitsource" @gitsource,
+  "Duckweed/moon-hive-cli/verify/workspace" @workspace,
 }

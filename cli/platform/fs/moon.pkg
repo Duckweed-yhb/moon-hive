@@ -11,6 +11,6 @@ options(
 )
 
 import {
-  "Duckweed/moon-hive/platform/proc" @proc,
+  "Duckweed/moon-hive-cli/platform/proc" @proc,
   "moonbitlang/core/env" @env,
 }

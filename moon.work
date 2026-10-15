@@ -1,0 +1,8 @@
+// MoonHive 工作区：把「可移植库核心」与「仅 native 的 CLI」拆成两个本地协同模块。
+//   "."       → Duckweed/moon-hive      纯计算库核心（全后端，消费方 add 的就是它）
+//   "./cli"   → Duckweed/moon-hive-cli  本地验证 CLI（仅 native，依赖上面的库核心）
+// 详见 docs/ARCHITECTURE.md 的「库 / CLI 拆分」一节。
+members = [
+  ".",
+  "./cli",
+]

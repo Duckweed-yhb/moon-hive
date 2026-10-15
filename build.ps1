@@ -136,13 +136,14 @@ try {
 
   if ($Run.Count -gt 0) {
     Write-Host ""
-    $runArgs = @("run", "cmd/moonhive", "--target", "native", "--target-dir", "$TargetDir", "--") + $Run
+    # 可执行入口在 cli/ 工作区成员（Duckweed/moon-hive-cli 模块）里，用 -C 定位。
+    $runArgs = @("-C", "cli", "run", "cmd/moonhive", "--target", "native", "--target-dir", "$TargetDir", "--") + $Run
     Invoke-Moon "moonhive $($Run -join ' ')" $runArgs
   }
 
   Write-Host ""
   Write-Host "完成。" -ForegroundColor Green
-  $exe = Join-Path $TargetDir "native\release\build\cmd\moonhive\moonhive.exe"
+  $exe = Join-Path $TargetDir "native\release\build\Duckweed\moon-hive-cli\cmd\moonhive\moonhive.exe"
   if (Test-Path $exe) {
     Write-Host "可执行文件   : $exe"
   }

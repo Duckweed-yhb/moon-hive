@@ -1,0 +1,21 @@
+///|
+/// MoonHive 可执行入口
+///
+/// 这是**参考消费者**，不是库本身：它把 features/* 组装成 CLI。
+/// supported_targets = "native" 从这里的依赖图继承（→ features → verify → platform）。
+pkgtype(kind: "executable")
+supported_targets = "native"
+
+import {
+  "Duckweed/moon-hive-cli/features/doctor" @doctor,
+  "Duckweed/moon-hive-cli/features/favorites" @favorites,
+  "Duckweed/moon-hive-cli/features/inspect" @inspect,
+  "Duckweed/moon-hive-cli/features/serve" @serve,
+  "Duckweed/moon-hive-cli/features/survey" @survey,
+  "Duckweed/moon-hive-cli/platform/proc" @proc,
+  "Duckweed/moon-hive-cli/verify/gitsource" @gitsource,
+  "Duckweed/moon-hive-cli/verify/workspace" @workspace,
+  "Duckweed/moon-hive-cli/verify/check" @check,
+  "Duckweed/moon-hive/verify/compare" @compare,
+  "moonbitlang/core/env" @env,
+}

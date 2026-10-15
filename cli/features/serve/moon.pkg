@@ -8,7 +8,7 @@
 supported_targets = "native"
 
 import {
-  "Duckweed/moon-hive/platform/fs" @fs,
-  "Duckweed/moon-hive/platform/http" @http,
-  "Duckweed/moon-hive/platform/proc" @proc,
+  "Duckweed/moon-hive-cli/platform/fs" @fs,
+  "Duckweed/moon-hive-cli/platform/http" @http,
+  "Duckweed/moon-hive-cli/platform/proc" @proc,
 }

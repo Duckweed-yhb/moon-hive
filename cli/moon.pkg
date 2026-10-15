@@ -1,0 +1,5 @@
+// cli 根包：工作区成员占位，自身无依赖。
+// 真正的可执行入口在 cmd/moonhive/（仅 native，由其依赖链声明）。
+supported_targets = "wasm+wasm-gc+js+native"
+
+import {}

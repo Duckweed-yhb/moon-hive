@@ -7,10 +7,10 @@
 supported_targets = "native"
 
 import {
-  "Duckweed/moon-hive/platform/fs" @fs,
-  "Duckweed/moon-hive/platform/proc" @proc,
+  "Duckweed/moon-hive-cli/platform/fs" @fs,
+  "Duckweed/moon-hive-cli/platform/proc" @proc,
   "Duckweed/moon-hive/verify/diagnose" @diagnose,
-  "Duckweed/moon-hive/verify/gitsource" @gitsource,
-  "Duckweed/moon-hive/verify/workspace" @workspace,
+  "Duckweed/moon-hive-cli/verify/gitsource" @gitsource,
+  "Duckweed/moon-hive-cli/verify/workspace" @workspace,
   "Duckweed/moon-hive/verify/compare" @compare,
 }

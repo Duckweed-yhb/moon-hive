@@ -53,8 +53,19 @@ Failed with 0 warnings, 14 errors.
 因此库核心能在浏览器/Wasm 环境里直接用，CI 会在四个后端上分别编译并跑测试：
 
 ```powershell
-./build.ps1 -CrossBackend   # => wasm / wasm-gc / js 各 111 测试全绿，native 165
+./build.ps1 -CrossBackend   # => wasm / wasm-gc / js 各 111 测试全绿，native 166
 ```
+
+### 工作区布局：库与 CLI 是两个包（`moon.work`）
+
+从 0.4.0 起，仓库是一个 **moon.work 工作区**，把「可移植库」和「仅 native 的命令行」拆成两个独立发布的模块，让消费方 `moon add` 到的是纯核心、而不是把 C FFI 的 CLI 一起拖进来：
+
+| 成员 | 模块名 | 内容 | 后端 |
+|---|---|---|---|
+| `.`（仓库根） | `Duckweed/moon-hive` | 纯计算库核心：`verify/diagnose`、`verify/compare`、`report/*`、`platform/time`、`core/error` | `wasm` `wasm-gc` `js` `native` |
+| `./cli` | `Duckweed/moon-hive-cli` | 本地验证 CLI：`cmd/moonhive`、`features/*`、`platform/{fs,http,proc}`、`verify/{check,gitsource,workspace}`，依赖上面的库 | 仅 `native` |
+
+消费方只 `moon add Duckweed/moon-hive` 即可在 wasm/浏览器里用归因引擎；想直接用命令行则另装 `Duckweed/moon-hive-cli`（或自行 `moon run`）。工作区里改库核心，CLI 一侧即时可见，无需发版即可联调。
 
 ## 其它语言生态里的对标工具
 
@@ -116,7 +127,7 @@ MoonHive 也是独立的第三方项目，与 MoonBit 官方的 mooncakes.io 发
 
 ## 安装（作为库）
 
-归因引擎已发布到 mooncakes.io（`Duckweed/moon-hive@0.3.0`）。在任何 MoonBit 项目里即可安装：
+归因引擎已发布到 mooncakes.io（`Duckweed/moon-hive@0.4.0`）。在任何 MoonBit 项目里即可安装：
 
 ```bash
 moon add Duckweed/moon-hive
@@ -129,7 +140,7 @@ import "Duckweed/moon-hive/verify/diagnose" @diagnose
 import "Duckweed/moon-hive/report/model" @model
 ```
 
-`verify/diagnose` 与 `report/*` 是纯计算包，可在 `wasm` / `wasm-gc` / `js` / `native` 四个后端使用；CLI 及其依赖的 C FFI 平台层仅在 `native`。
+`verify/diagnose` 与 `report/*` 是纯计算包，可在 `wasm` / `wasm-gc` / `js` / `native` 四个后端使用；CLI 及其依赖的 C FFI 平台层仅在 `native`，已独立为 `Duckweed/moon-hive-cli`。
 
 **非 native 消费者最小示例**：见 [`docs/examples/wasm-consumer/`](docs/examples/wasm-consumer/README.md)——独立 `moon add Duckweed/moon-hive` 后直接调用 `classify`，`wasm` / `js` / `native` 三后端实测 2 测试全过，证明库脱离 CLI 独立可用。
 
@@ -198,7 +209,7 @@ import "Duckweed/moon-hive/report/model" @model
 |---|---|
 | MoonBit 源码 | 5,527 行 / 20 个包 |
 | C FFI 平台层 | 1,863 行（fs 774 / http 741 / proc 348） |
-| 单元测试 | **165 个，全绿**（`moon test --target native`） |
+| 单元测试 | **166 个，全绿**（`moon test --target native`） |
 | 跨后端测试 | **111 个 × 3 后端**（`wasm` / `wasm-gc` / `js` 上的库核心） |
 | 第三方运行时依赖 | **0**（仅 `moonbitlang/core` + 自建 C FFI 层） |
 | CI | GitHub Actions，Linux / Windows 双平台矩阵 |
